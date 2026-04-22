@@ -1,0 +1,73 @@
+/* This is used to apply global styles for the Vue app and/or override Bootstrap styles */
+
+/* ----------- Global styles ----------- */
+:root {
+  --bs-body-font-size: 14px;
+  --bs-heading-color: #303030
+}
+.card {
+    overflow: hidden;
+}
+.form-control {
+    font-size: 12px;
+}
+.form-label {
+    font-size: 13px;
+    margin-bottom: 0rem;
+    font-weight: 700;
+}
+.card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+}
+.card-title-icon {
+  height: 1.2rem;
+}
+.card-title-icon_container {
+  height: 1.5rem;
+  width: 1.5rem;
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-title-text {
+  color: var(--bs-heading-color);
+  font-size: 1rem;
+  font-family: Arial;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  margin: 0
+}
+/*.card-header {
+  background-color: white;
+}*/
+
+.text-body-secondary {
+  font-size: 13px;
+}
+
+p {
+    margin-bottom: 0.75rem;
+}
+
+/* ------------ Theme styles ------------ */
+
+/* --- Online Theme --- */
+
+.online-theme .card {
+  border-radius: .25rem;
+}
+
+.online-theme .card-header {
+  font-size: 14px;
+}
+
+/* --- Mobile Theme --- */
+
+.mobile-device-theme .card {
+  border-radius: 14px;
+}

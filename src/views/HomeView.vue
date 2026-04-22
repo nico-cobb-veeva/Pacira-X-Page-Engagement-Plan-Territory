@@ -1,0 +1,48 @@
+<template>
+    <div class="container-fluid py-3 px-3 bg-light" style="min-height: 100vh;">
+        
+        <!-- Top controls -->
+        <div class="row mb-3">
+            <div class="col d-flex justify-content-end align-items-center">
+                <span class="me-2 fw-bold text-secondary">Territory</span>
+                <select class="form-select form-select-sm" style="width: auto;">
+                    <option>S20000-South</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Top Widget Row -->
+        <div class="row gx-3 mb-3">
+            <!-- Engagement Plan Progress -->
+            <div class="col-lg-3 col-md-12 mb-3 mb-lg-0">
+                <EngagementPlanProgress />
+            </div>
+            <!-- Interaction Summary -->
+            <div class="col-lg-5 col-md-12 mb-3 mb-lg-0">
+                <InteractionSummary />
+            </div>
+            <!-- Action Items -->
+            <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
+                <ActionItems />
+            </div>
+        </div>
+
+        <!-- Bottom View Row -->
+        <div class="row gx-3">
+            <div class="col-12">
+                <EngagementPlanView />
+            </div>
+        </div>
+
+    </div>
+</template>
+
+<script setup>
+    import EngagementPlanProgress from '@/components/dashboard/EngagementPlanProgress.vue';
+    import InteractionSummary from '@/components/dashboard/InteractionSummary.vue';
+    import ActionItems from '@/components/dashboard/ActionItems.vue';
+    import EngagementPlanView from '@/components/dashboard/EngagementPlanView.vue';
+</script>
+
+<style>
+</style>
