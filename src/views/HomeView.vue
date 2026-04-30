@@ -5,8 +5,8 @@
         <div class="row mb-3">
             <div class="col d-flex justify-content-end align-items-center">
                 <span class="me-2 fw-bold text-secondary">Territory</span>
-                <select class="form-select form-select-sm" style="width: auto;">
-                    <option>S20000-South</option>
+                <select class="form-select form-select-sm" style="width: auto;" v-model="selectedTerritoryId" @change="handleTerritoryChange">
+                    <option v-for="terr in territories" :key="terr.id" :value="terr.id">{{ terr.name }}</option>
                 </select>
             </div>
         </div>
@@ -38,10 +38,30 @@
 </template>
 
 <script setup>
+    import { ref, watch } from 'vue';
+    import { useI18n } from 'vue-i18n';
+    import { useAppStore } from '@/store/app';
+    import { storeToRefs } from 'pinia';
     import EngagementPlanProgress from '@/components/dashboard/EngagementPlanProgress.vue';
     import InteractionSummary from '@/components/dashboard/InteractionSummary.vue';
     import ActionItems from '@/components/dashboard/ActionItems.vue';
     import EngagementPlanView from '@/components/dashboard/EngagementPlanView.vue';
+
+    const store = useAppStore();
+    const { t } = useI18n();
+    const { territories, territory } = storeToRefs(store);
+
+    const selectedTerritoryId = ref('');
+
+    watch(() => territory.value.id, (newVal) => {
+        if (newVal) {
+            selectedTerritoryId.value = newVal;
+        }
+    }, { immediate: true });
+
+    const handleTerritoryChange = () => {
+        store.changeTerritory(selectedTerritoryId.value, t);
+    };
 </script>
 
 <style>

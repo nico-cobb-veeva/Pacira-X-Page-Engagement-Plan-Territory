@@ -85,13 +85,22 @@ export const getUserInfo = (userIds) => {
     return deferred.promise;
 }
 //query user_territory object directly first
-export const getTerritory = (territoryIds) => {
+export const getTerritory = (territoryIds, isManager = false) => {
     const deferred = $q.defer();
-    console.log("doooooo we get in here getTerritory?");
+
+    let whereClause = '';
+    // TODO: Utilize the passed isManager flag for the user type check
+    // eslint-disable-next-line
+    if(true) {
+        whereClause = 'id IN ' + Utils.getInStatementArray(territoryIds) + ' OR parent_territory__v IN ' + Utils.getInStatementArray(territoryIds);
+    } else {
+        whereClause = 'id IN ' + Utils.getInStatementArray(territoryIds);
+    }
+    
     const queryConfig = {
         object: 'territory__v',
         fields: ['id', 'name__v'],
-        where: 'id IN ' + Utils.getInStatementArray(territoryIds),
+        where: whereClause,
         sort: ['name__v ASC']
     }
         ds.queryRecord(queryConfig).then(result => {
@@ -126,14 +135,33 @@ export const getUserTerritory = (userIds) => {
     return deferred.promise;
 }
 
+// get account territories
+export const getAccountTerritories = (territoryId) => {
+    const deferred = $q.defer();
+    const queryConfig = {
+        object: 'account_territory__v',
+        fields: ['account__v'],
+        where: `territory__v = '${territoryId}'`
+    };
+    ds.queryRecord(queryConfig).then(result => {
+        console.log('getAccountTerritories()', result ? result[queryConfig.object] : []);
+        let data = result && result[queryConfig.object] ? result[queryConfig.object] : [];
+        deferred.resolve(data);
+    }, err => {
+        console.log(err);
+        deferred.resolve(null);
+    });
+    return deferred.promise;
+};
+
 //get account detail
 export const getAccountInfo = (acctIds) => {
     const deferred = $q.defer();
     const queryConfig = {
         object: 'account__v',
-        fields: ['id', 'name__v', 'ispersonaccount__v', 'credentials__v', 'pac_exparel_priority__c', 'specialty_1__v', 'pacira_primary_parent_name__c', 
-                    'primary_parent__v', 'business_title__c', 'pac_iovera_priority__c', 'pac_zilretta_priority__c', 'net_hco_type__c', 'pacira_idn__c', 
-                    'pac_prod_restr__c', 'pac_samp_restr__c', 'pacira_do_not_call_banner__c', 'website_cda__v', 'office_phone_cda__v', 'pacira_email__c', 'email_cda__v', 'secondary_email__c'],
+        fields: ['id', 'name__v', 'ispersonaccount__v', 'pac_exparel_priority__c', 'pacira_primary_parent_name__c', 
+                    'primary_parent__v', 'pac_iovera_priority__c', 'pac_zilretta_priority__c', 'net_hco_type__c', 'pacira_idn__c', 
+                    'pacira_do_not_call_banner__c', 'website_cda__v', 'office_phone_cda__v', 'pacira_email__c', 'email_cda__v', 'secondary_email__c'],
         where: 'id IN ' + Utils.getInStatementArray(acctIds),
         sort: ['name__v ASC']
     };
@@ -169,20 +197,22 @@ export const getAddress = (acctIds) => {
 };
 
 // get calls
-export const getSubmittedCalls = (acctIds) => {
-    const date90DaysAgo = Moment().subtract(90, "days").format(SYSTEM_DATE_FORMAT);
+export const getSubmittedCalls = (acctIds, daysAgo = 90) => {
+    const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
     const queryConfig = {
         object: 'call2__v',
         fields: ['id', 'account__v', 'clm__v', 'call_date__v', 'ownerid__v', 'detailed_products__v', 'activity_type__c'],
         where: `account__v IN ${Utils.getInStatementArray(acctIds)}
                AND call2_status__v IN  ${Utils.getInStatementArray(['submitted__v'])}
-               AND call_date__v >= '${date90DaysAgo}'`,
+               AND call_date__v >= '${targetDate}'`,
         sort: ['call_datetime__v DESC']
     };
     ds.queryRecord(queryConfig).then(result => {
         console.log('getSubmittedCalls()', result[queryConfig.object]);
-        deferred.resolve(result[queryConfig.object]);
+        let data = result[queryConfig.object] || [];
+        data = data.filter(item => Moment(item.call_date__v).isSameOrAfter(targetDate, 'day'));
+        deferred.resolve(data);
     }, err => {
         console.log(err);
         deferred.resolve(null);
@@ -191,19 +221,21 @@ export const getSubmittedCalls = (acctIds) => {
 };
 
 // get child calls for a given group calls
-export const getChildSubmittedCalls = (callIds) => {
-    const date90DaysAgo = Moment().subtract(90, "days").format(SYSTEM_DATE_FORMAT);
+export const getChildSubmittedCalls = (callIds, daysAgo = 90) => {
+    const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
     const queryConfig = {
         object: 'call2__v',
         fields: ['id', 'parent_call__v'],
         where: `parent_call__v IN ${Utils.getInStatementArray(callIds)}
                AND call2_status__v IN  ${Utils.getInStatementArray(['submitted__v'])}
-               AND call_date__v >= '${date90DaysAgo}'`
+               AND call_date__v >= '${targetDate}'`
     };
     ds.queryRecord(queryConfig).then(result => {
         console.log('getChildSubmittedCalls()', result[queryConfig.object]);
-        deferred.resolve(result[queryConfig.object]);
+        let data = result[queryConfig.object] || [];
+        data = data.filter(item => Moment(item.call_date__v).isSameOrAfter(targetDate, 'day'));
+        deferred.resolve(data);
     }, err => {
         console.log(err);
         deferred.resolve(null);
@@ -212,20 +244,22 @@ export const getChildSubmittedCalls = (callIds) => {
 };
 
 // get sent email
-export const getSentEmails = (acctIds) => {
-    const date90DaysAgo = Moment().subtract(90, "days").format(SYSTEM_DATE_FORMAT);
+export const getSentEmails = (acctIds, daysAgo = 90) => {
+    const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
     const queryConfig = {
         object: 'sent_email__v',
         fields: ['id', 'account__v', 'subject__v', 'email_sent_date__v', 'ownerid__v', 'clicked__v', 'last_click_date__v', 'product_display__v'],
         where: `account__v IN ${Utils.getInStatementArray(acctIds)}
                AND sent_email_status__v IN  ${Utils.getInStatementArray(['sent__v', 'delivered__v'])}
-               AND email_sent_date__v >= '${date90DaysAgo}'`,
+               AND email_sent_date__v >= '${targetDate}'`,
         sort: ['email_sent_date__v DESC']
     };
     ds.queryRecord(queryConfig).then(result => {
         console.log('getSentEmails()', result[queryConfig.object]);
-        deferred.resolve(result[queryConfig.object]);
+        let data = result[queryConfig.object] || [];
+        data = data.filter(item => Moment(item.email_sent_date__v).isSameOrAfter(targetDate, 'day'));
+        deferred.resolve(data);
     }, err => {
         console.log(err);
         deferred.resolve(null);
@@ -276,9 +310,9 @@ export const getMedicalEvents = (eventIds) => {
 };
 
 // get suggestions
-export const getSuggestions = (acctIds, ownerIds) => {
+export const getSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
     const today = Moment().format(SYSTEM_DATE_FORMAT);
-    const date90DaysAgo = Moment().subtract(90, "days").format(SYSTEM_DATE_FORMAT);
+    const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
     const queryConfig = {
         object: 'suggestion__v',
@@ -291,12 +325,38 @@ export const getSuggestions = (acctIds, ownerIds) => {
                 AND (actioned__v = null OR actioned__v = 0)
                 AND (no_homepage__v = null OR no_homepage__v = false)
                 AND expiration_date__v >= '${today}'
-                AND posted_date__v >= '${date90DaysAgo}'`,
+                AND posted_date__v >= '${targetDate}'`,
         sort: ['posted_date__v DESC']
     };
     ds.queryRecord(queryConfig).then(result => {
         console.log('getSuggestions()', result[queryConfig.object]);
-        deferred.resolve(result[queryConfig.object]);
+        let data = result[queryConfig.object] || [];
+        data = data.filter(item => Moment(item.posted_date__v).isSameOrAfter(targetDate, 'day'));
+        deferred.resolve(data);
+    }, err => {
+        console.log(err);
+        deferred.resolve(null);
+    });
+    return deferred.promise;
+};
+
+// get actioned suggestions
+export const getActionedSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
+    const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
+    const deferred = $q.defer();
+    const queryConfig = {
+        object: 'suggestion__v',
+        fields: ['id'],
+        where: `ownerid__v IN ${Utils.getInStatementArray(ownerIds)}
+                AND account__v IN ${Utils.getInStatementArray(acctIds)}
+                AND (actioned__v = true OR actioned__v = 1)
+                AND posted_date__v >= '${targetDate}'`
+    };
+    ds.queryRecord(queryConfig).then(result => {
+        console.log('getActionedSuggestions()', result[queryConfig.object]);
+        let data = result[queryConfig.object] || [];
+        data = data.filter(item => Moment(item.posted_date__v).isSameOrAfter(targetDate, 'day'));
+        deferred.resolve(data);
     }, err => {
         console.log(err);
         deferred.resolve(null);
@@ -324,13 +384,12 @@ export const getChildAccounts = (acctIds) => {
 };
 
 // get account plan
-export const getAccountPlan = (acctId, pacTeam) => {
+export const getAccountPlans = (acctIds, pacTeam) => {
     const deferred = $q.defer();
     const queryConfig = {
         object: 'account_plan__v',
-        fields: ['id', 'name__v'],
-        where: 'account__v = \'' + acctId + '\'' +
-               ' AND pac_team__c = \'' + pacTeam + '\'',
+        fields: ['id', 'name__v', 'account__v'],
+        where: `account__v IN ${Utils.getInStatementArray(acctIds)} AND pac_team__c = '${pacTeam}'`,
         sort: ['end_date__v DESC']
     };
     ds.queryRecord(queryConfig).then(result => {
@@ -344,12 +403,12 @@ export const getAccountPlan = (acctId, pacTeam) => {
 };
 
 // get plan tactic
-export const getPlanTactics = (acctPlanId) => {
+export const getPlanTactics = (acctPlanIds) => {
     const deferred = $q.defer();
     const queryConfig = {
         object: 'plan_tactic__v',
-        fields: ['id', 'name__v'],
-        where: 'account_plan__v = \'' + acctPlanId + '\'',
+        fields: ['id', 'name__v', 'account_plan__v'],
+        where: 'account_plan__v IN ' + Utils.getInStatementArray(acctPlanIds),
         sort: ['name__v ASC']
     };
     ds.queryRecord(queryConfig).then(result => {
@@ -419,13 +478,53 @@ export const getActionItems = (acctTacticIds) => {
     return deferred.promise;
 };
 
+// get dashboard action items
+export const getDashboardActionItems = (ownerIds) => {
+    const today = Moment().format(SYSTEM_DATE_FORMAT);
+    const in30Days = Moment().add(30, "days").format(SYSTEM_DATE_FORMAT);
+    const deferred = $q.defer();
+    const queryConfig = {
+        object: 'action_item__v',
+        fields: ['id', 'name__v', 'pac_action_item__c', 'account_plan__v', 'ownerid__v', 'due_date__v', 'action_item_status__v', 'pac_action_item_marked_for_delete__c'],
+        where: `ownerid__v IN ${Utils.getInStatementArray(ownerIds)}
+                AND action_item_status__v != 'completed__v'
+                AND due_date__v >= '${today}'
+                AND due_date__v <= '${in30Days}'`,
+        sort: ['due_date__v ASC']
+    };
+    ds.queryRecord(queryConfig).then(result => {
+        deferred.resolve(result[queryConfig.object]);
+    }, err => {
+        console.log(err);
+        deferred.resolve(null);
+    });
+    return deferred.promise;
+};
+
+// get account plans by ids
+export const getAccountPlansByIds = (planIds) => {
+    const deferred = $q.defer();
+    const queryConfig = {
+        object: 'account_plan__v',
+        fields: ['id', 'account__v'],
+        where: `id IN ${Utils.getInStatementArray(planIds)}`
+    };
+    ds.queryRecord(queryConfig).then(result => {
+        deferred.resolve(result[queryConfig.object]);
+    }, err => {
+        console.log(err);
+        deferred.resolve(null);
+    });
+    return deferred.promise;
+};
+
 // get key stakeholders
-export const getKeyStakeholders = (acctPlanId) => {
+export const getKeyStakeholders = (acctPlanIds) => {
     const deferred = $q.defer();
     const queryConfig = {
         object: 'key_stakeholder__v',
-        fields: ['id', 'key_stakeholder__v', 'role__v', 'pac_key_stakeholder_marked_for_delete__c'],
-        where: 'account_plan__v = \'' + acctPlanId + '\'' +
+        fields: ['id', 'key_stakeholder__v', 'role__v', 'pac_key_stakeholder_marked_for_delete__c', 'account_plan__v'],
+        where: 'account_plan__v IN ' + Utils.getInStatementArray(acctPlanIds) +
                 ' AND key_stakeholder__v != null',
         sort: ['name__v ASC']
     };

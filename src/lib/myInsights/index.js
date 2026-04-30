@@ -45,26 +45,41 @@ export const getUserDetail = () => {
     });
 };
 
-export const getUserTerritoryDetail = (userId) => {
+export const getUserTerritoryDetail = (userId, isManager) => {
     let terrIds = [];
     return ds.getUserTerritory(userId)
     .then(territoryResponse => {
-        terrIds = territoryResponse.map(territory => territory.territory__v);
-        return ds.getTerritory([terrIds[0]]);
+        if (territoryResponse && territoryResponse.length > 0) {
+            terrIds = territoryResponse.map(territory => territory.territory__v);
+            return ds.getTerritory(terrIds, isManager);
+        }
+        return [];
     }).then(territoryResp => {
         return territoryResp;
     });
 };
 
 // current account detail
-export const getAccountDetail = () => {
+export const getAccountDetail = (territoryId) => {
     let acctResp = [];
-    return ds.getDataForCurrentObject('account__v', 'id')
-    .then(acctId => {
-        return ds.getAccountInfo([acctId]);
+    return ds.getAccountTerritories(territoryId)
+    .then(atResp => {
+        let acctIds = [];
+        if(atResp && atResp.length > 0) {
+            acctIds = atResp.map(at => at.account__v);
+        }
+        console.log("BEFORE getAccountInfo");
+        return ds.getAccountInfo(acctIds);
     }).then(aResp => {
-        acctResp = [...aResp];
-        return ds.getAccountInfo([aResp[0].primary_parent__v]);
+        acctResp = aResp ? [...aResp] : [];
+        let parentIds = [];
+        acctResp.forEach(a => {
+            if(a.primary_parent__v) parentIds.push(a.primary_parent__v);
+        });
+        if (parentIds.length > 0) {
+            return ds.getAccountInfo(Array.from(new Set(parentIds)));
+        }
+        return [];
     }).then(parentResp => {
         return { acctList: acctResp, parentAcctList: parentResp };
     });
@@ -312,9 +327,9 @@ const processSuggestionResponse = (suggestions, accountMap) => {
 };
 
 // get suggestion info
-export const getKeyStakeholderInfo = (acctPlanId) => {
+export const getKeyStakeholderInfo = (acctPlanIds) => {
     let accountMap = new Map(), callMap = new Map(), sentEmailMap = new Map(), addrMap = new Map(), ksList = [], accountIds = [];
-    return ds.getKeyStakeholders(acctPlanId)
+    return ds.getKeyStakeholders(acctPlanIds)
     .then(ksResp => {
         if(ksResp && ksResp.length > 0) {
             ksResp.forEach(ks => {
@@ -398,4 +413,106 @@ const processKeyStakeholderResponse = (keyStakeholders, accountMap, callMap, sen
         });
     }
     return retList;
+};
+
+// get interaction summary aggregated stats
+export const getInteractionSummaryStats = (acctIds, ownerIds, daysAgo = 90) => {
+    return window.Q.all([
+        ds.getSubmittedCalls(acctIds, daysAgo),
+        ds.getSentEmails(acctIds, daysAgo),
+        ds.getSuggestions(acctIds, ownerIds, daysAgo),
+        ds.getActionedSuggestions(acctIds, ownerIds, daysAgo)
+    ]).then(([calls, emails, pendingSuggestions, actionedSuggestions]) => {
+        let callIds = [];
+        if(calls && calls.length > 0) {
+            callIds = calls.map(c => c.id);
+        }
+
+        let childCallsPromise = callIds.length > 0 ? ds.getChildSubmittedCalls(callIds, daysAgo) : window.Q.resolve([]);
+
+        return childCallsPromise.then(childCalls => {
+            const totalCalls = calls ? calls.length : 0;
+            const totalAttendees = childCalls ? childCalls.length : 0;
+            const avgAttendees = totalCalls > 0 ? Math.round(totalAttendees / totalCalls) : 0;
+
+            const callsWithMedia = calls ? calls.filter(c => c.clm__v === 1 || c.clm__v === true).length : 0;
+            let mediaUsed = 0;
+            if(calls && calls.length > 0) {
+                calls.forEach(c => {
+                    if(c.detailed_products__v) {
+                        mediaUsed += c.detailed_products__v.split(',').length;
+                    }
+                });
+            }
+
+            const totalEmails = emails ? emails.length : 0;
+            const clickedEmails = emails ? emails.filter(e => e.clicked__v === 1 || e.clicked__v === true).length : 0;
+            const emailClickRate = totalEmails > 0 ? Math.round((clickedEmails / totalEmails) * 100) : 0;
+
+            return {
+                totalCalls, avgAttendees,
+                callsWithMedia, mediaUsed,
+                totalEmails, emailClickRate,
+                pendingSuggestions: pendingSuggestions ? pendingSuggestions.length : 0,
+                actionedSuggestions: actionedSuggestions ? actionedSuggestions.length : 0
+            };
+        });
+    });
+};
+
+// get action items info for dashboard
+export const getDashboardActionItemsInfo = (ownerIds, actionItemMap) => {
+    let actionItems = [], planIds = [], ownerIdsToFetch = [];
+    let planMap = new Map(), accountMap = new Map(), userMap = new Map();
+
+    return ds.getDashboardActionItems(ownerIds)
+    .then(aiResp => {
+        if(aiResp && aiResp.length > 0) {
+            aiResp.forEach(ai => {
+                let isMarkedForDelete = false;
+                if((typeof ai.pac_action_item_marked_for_delete__c === 'number' && ai.pac_action_item_marked_for_delete__c === 1) 
+                    || (typeof ai.pac_action_item_marked_for_delete__c === 'boolean' && ai.pac_action_item_marked_for_delete__c === true)) {
+                    isMarkedForDelete = true;
+                }
+                if(isMarkedForDelete === false) {
+                    actionItems.push(ai);
+                    if(ai.account_plan__v) planIds.push(ai.account_plan__v);
+                    if(ai.ownerid__v) ownerIdsToFetch.push(ai.ownerid__v);
+                }
+            });
+        }
+        return planIds.length > 0 ? ds.getAccountPlansByIds(Array.from(new Set(planIds))) : window.Q.resolve([]);
+    }).then(planResp => {
+        let acctIds = [];
+        if(planResp && planResp.length > 0) {
+            planResp.forEach(p => {
+                planMap.set(p.id, p.account__v);
+                if(p.account__v) acctIds.push(p.account__v);
+            });
+        }
+        return acctIds.length > 0 ? ds.getAccountInfo(Array.from(new Set(acctIds))) : window.Q.resolve([]);
+    }).then(acctResp => {
+        if(acctResp && acctResp.length > 0) {
+            acctResp.forEach(a => accountMap.set(a.id, a.name__v));
+        }
+        return ownerIdsToFetch.length > 0 ? ds.getUserInfo(Array.from(new Set(ownerIdsToFetch))) : window.Q.resolve([]);
+    }).then(userResp => {
+        if(userResp && userResp.length > 0) {
+            userResp.forEach(u => userMap.set(u.id, u.name__v));
+        }
+        return actionItems.map(ai => {
+            const acctId = planMap.get(ai.account_plan__v);
+            let itemName = ai.name__v;
+            if(ai.pac_action_item__c && actionItemMap && actionItemMap.has(ai.pac_action_item__c)) {
+                itemName = actionItemMap.get(ai.pac_action_item__c);
+            }
+            return {
+                id: ai.id,
+                name: itemName,
+                accountName: (acctId && accountMap.has(acctId)) ? accountMap.get(acctId) : NO_DATA,
+                assignee: (ai.ownerid__v && userMap.has(ai.ownerid__v)) ? userMap.get(ai.ownerid__v) : NO_DATA,
+                dueDate: (ai.due_date__v) ? Moment(ai.due_date__v).format(DISPLAY_DATE_FORMAT) : NO_DATA
+            };
+        });
+    });
 };

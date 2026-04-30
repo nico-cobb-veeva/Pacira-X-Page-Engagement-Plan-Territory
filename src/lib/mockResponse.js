@@ -180,7 +180,18 @@ export const queryRecord = {
     territory__v: {
         territory__v: [
             {
+                id: 'terr1',
                 name__v: 'S1000200'
+            },
+            {
+                id: 'terr2',
+                name__v: 'S1000201',
+                parent_territory__v: 'terr1'
+            },
+            {
+                id: 'terr3',
+                name__v: 'S1000202',
+                parent_territory__v: 'terr1'
             }
         ]
     },
@@ -334,7 +345,7 @@ export const queryRecord = {
     call2__v: {
         call2__v: [{
             id: "c1",
-            call_date__v: "2025-10-08",
+            call_date__v: "2026-04-20",
             account__v: "V4T000000001000",
             clm__v: 1,
             ownerid__v: '20079859',
@@ -343,7 +354,7 @@ export const queryRecord = {
             parent_call__v: 'c1'
         }, {
             id: "c2",
-            call_date__v: "2025-10-01",
+            call_date__v: "2026-04-10",
             account__v: "V4T000000001000",
             clm__v: 0,
             ownerid__v: '20079859',
@@ -352,7 +363,7 @@ export const queryRecord = {
             parent_call__v: 'c1'
         }, {
             id: "c3",
-            call_date__v: "2025-09-30",
+            call_date__v: "2026-03-20",
             account__v: "V4T000000001000",
             clm__v: 1,
             ownerid__v: '20079860',
@@ -361,7 +372,7 @@ export const queryRecord = {
             parent_call__v: 'c2'
         }, {
             id: "c4",
-            call_date__v: "2025-09-27",
+            call_date__v: "2026-03-10",
             account__v: "V4T000000001000",
             clm__v: 0,
             ownerid__v: '20079859',
@@ -370,7 +381,7 @@ export const queryRecord = {
             parent_call__v: 'c2'
         }, {
             id: "c5",
-            call_date__v: "2025-09-20",
+            call_date__v: "2026-02-20",
             account__v: "V4T000000001000",
             clm__v: 0,
             ownerid__v: '20079860',
@@ -379,7 +390,7 @@ export const queryRecord = {
             parent_call__v: 'c5'
         }, {
             id: "c6",
-            call_date__v: "2025-09-15",
+            call_date__v: "2026-02-10",
             account__v: "V4T000000001000",
             clm__v: 0,
             ownerid__v: '20079859',
@@ -388,7 +399,7 @@ export const queryRecord = {
             parent_call__v: 'c3'
         }, {
             id: "c7",
-            call_date__v: "2025-08-12",
+            call_date__v: "2026-01-15",
             account__v: "V4T000000001000",
             clm__v: 1,
             ownerid__v: '20079861',
@@ -396,8 +407,8 @@ export const queryRecord = {
             activity_type__c: 'product_call__c',
             parent_call__v: 'c4'
         }, {
-            id: "c7",
-            call_date__v: "2025-08-15",
+            id: "c8",
+            call_date__v: "2026-01-10",
             account__v: "V4T000000001001",
             clm__v: 0,
             ownerid__v: '20079859',
@@ -412,47 +423,47 @@ export const queryRecord = {
         sent_email__v: [{
             id: "se1",
             subject__v: 'EXPAREL Discount Program',
-            email_sent_date__v: "2025-10-02T20:27:19.000Z",
+            email_sent_date__v: "2026-04-20T20:27:19.000Z",
             account__v: "V4T000000001000",
             clicked__v: 0,
             ownerid__v: '20079859',
-            last_click_date__v: '2025-10-02T11:34:39.000Z',
+            last_click_date__v: '2026-04-21T11:34:39.000Z',
             product_display__v: 'EXPAREL'
         }, {
             id: "se2",
             subject__v: 'Medicare reimburses EXPAREL (J0666) in outpatient settings for spine procedures',
-            email_sent_date__v: "2025-09-21T20:27:19.000Z",
+            email_sent_date__v: "2026-03-20T20:27:19.000Z",
             account__v: "V4T000000001000",
             clicked__v: 1,
             ownerid__v: '20079859',
-            last_click_date__v: '2025-09-18T11:34:39.000Z',
+            last_click_date__v: '2026-03-22T11:34:39.000Z',
             product_display__v: 'EXPAREL'
         }, {
             id: "se3",
             subject__v: 'EXCLUSIVE ORTHOFORUM CONTRACTED PRICING FOR ZILRETTA',
-            email_sent_date__v: "2025-09-10T20:27:19.000Z",
+            email_sent_date__v: "2026-02-20T20:27:19.000Z",
             account__v: "V4T000000001000",
             clicked__v: 1,
             ownerid__v: '20079860',
-            last_click_date__v: '2025-09-10T11:34:39.000Z',
+            last_click_date__v: '2026-02-21T11:34:39.000Z',
             product_display__v: 'ZILRETTA'
         }, {
             id: "se4",
             subject__v: 'EXCLUSIVE ORTHOFORUM CONTRACTED PRICING FOR ZILRETTA',
-            email_sent_date__v: "2025-08-10T20:27:19.000Z",
+            email_sent_date__v: "2026-01-15T20:27:19.000Z",
             account__v: "V4T000000001002",
             clicked__v: 1,
             ownerid__v: '20079860',
-            last_click_date__v: '2025-09-10T11:34:39.000Z',
+            last_click_date__v: '2026-01-16T11:34:39.000Z',
             product_display__v: 'ZILRETTA'
         }, {
             id: "se5",
             subject__v: 'SAFETY DATA FOR ZILRETTA',
-            email_sent_date__v: "2025-08-04T20:27:19.000Z",
+            email_sent_date__v: "2026-01-10T20:27:19.000Z",
             account__v: "V4T000000001000",
             clicked__v: 0,
             ownerid__v: '20079859',
-            last_click_date__v: '2025-09-10T11:34:39.000Z',
+            last_click_date__v: '2026-01-11T11:34:39.000Z',
             product_display__v: 'ZILRETTA'
         }],
         "success":true,
@@ -493,8 +504,8 @@ export const queryRecord = {
             record_type_name__v: 'call__v',
             priority__v: 'urgent__v',
             account__v: "V4T000000001001",
-            posted_date__v: "2025-10-16",
-            expiration_date__v: "2025-10-23",
+            posted_date__v: "2026-04-20",
+            expiration_date__v: "2026-10-23",
             display_dismiss__v: 1,
             display_mark_as_complete__v: 1
         }, {
@@ -504,8 +515,8 @@ export const queryRecord = {
             record_type_name__v: 'email__v',
             priority__v: 'normal__v',
             account__v: "V4T000000001002",
-            posted_date__v: "2025-10-10",
-            expiration_date__v: "2025-10-17",
+            posted_date__v: "2026-03-20",
+            expiration_date__v: "2026-10-17",
             display_dismiss__v: 1,
             display_mark_as_complete__v: 1
         }, {
@@ -515,8 +526,8 @@ export const queryRecord = {
             record_type_name__v: 'call__v',
             priority__v: 'normal__v',
             account__v: "V4T000000001002",
-            posted_date__v: "2025-10-12",
-            expiration_date__v: "2025-11-02",
+            posted_date__v: "2026-02-20",
+            expiration_date__v: "2026-11-02",
             display_dismiss__v: 1,
             display_mark_as_complete__v: 1
         }, {
@@ -526,8 +537,8 @@ export const queryRecord = {
             record_type_name__v: 'insight__v',
             priority__v: 'normal__v',
             account__v: "V4T000000001004",
-            posted_date__v: "2025-10-02",
-            expiration_date__v: "2025-11-02",
+            posted_date__v: "2026-01-15",
+            expiration_date__v: "2026-11-02",
             display_dismiss__v: 1,
             display_mark_as_complete__v: 1
         }, {
@@ -537,8 +548,8 @@ export const queryRecord = {
             record_type_name__v: 'call__v',
             priority__v: 'normal__v',
             account__v: "V4T000000001003",
-            posted_date__v: "2025-10-04",
-            expiration_date__v: "2025-11-04",
+            posted_date__v: "2026-01-10",
+            expiration_date__v: "2026-11-04",
             display_dismiss__v: 1,
             display_mark_as_complete__v: 1
         }],
@@ -646,7 +657,7 @@ export const queryRecord = {
             account_tactic__v: "at5",
             plan_tactic__v: "pt2",
             action_item_status__v: "not_started__c",
-            due_date__v: "2025-12-10",
+            due_date__v: "2026-05-10",
             completed_date__v: null,
             pac_progress__c: null,
             pac_action_item_marked_for_delete__c: null

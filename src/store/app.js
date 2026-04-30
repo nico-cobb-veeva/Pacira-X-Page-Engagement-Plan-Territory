@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import { partitionQuery, getUserDetail, getAccountDetail, getCallInfo, getSentEmailInfo, getSuggestionInfo, getKeyStakeholderInfo, getEventInfo, getChildAccountInfo, getUserTerritoryDetail } from '@/lib/myInsights/index';
-import { getAvailableObjects, getAddress, getPicklistValueLabels, getObjectTypes, getAccountPlan, getPlanTactics, getAccountTactics, getActionItems, getUserTerritory } from '@/lib/myInsights/query';
+import { partitionQuery, getUserDetail, getAccountDetail, getCallInfo, getSentEmailInfo, getSuggestionInfo, getKeyStakeholderInfo, getEventInfo, getChildAccountInfo, getUserTerritoryDetail, getInteractionSummaryStats, getDashboardActionItemsInfo } from '@/lib/myInsights/index';
+import { getAvailableObjects, getAddress, getPicklistValueLabels, getObjectTypes, getAccountPlans, getPlanTactics, getAccountTactics, getActionItems, getUserTerritory } from '@/lib/myInsights/query';
 import { NO_DATA, DISPLAY_DATE_FORMAT, SYSTEM_DATE_FORMAT, TEAM_EXPAREL, TEAM_IOVERA, TEAM_ZILRETTA, TEAM_OMFS } from '@/lib/helper/constants';
 import * as Utils from '@/lib/helper/commonUtils';
 import Moment from 'moment';
@@ -14,6 +14,7 @@ export const useAppStore = defineStore('app', {
         user: { id: '', appProfile: '', userType: '' },
         account: { id: '', name: '', paciraEmail: '', primaryEmail: '', secondaryEmail: '', hcoType: '', parentId: '', parentName: '',  idnName: '', gpoName: '', phoneNo: '',
                 website: '', address: '', productPromoRestrictions: '', sampleRestrictions: '', doNotCall: '' },
+        territories: [],
         territory: {id: '', name: ''},
         territoryType: {type: ''},
         callList: [],
@@ -24,6 +25,17 @@ export const useAppStore = defineStore('app', {
         planTacticList: [],
         acctTacticList: [],
         actionItemList: [],
+        dashboardActionItems: [],
+        interactionSummary: {
+            totalCalls: 0,
+            avgAttendees: 0,
+            callsWithMedia: 0,
+            mediaUsed: 0,
+            totalEmails: 0,
+            emailClickRate: 0,
+            pendingSuggestions: 0,
+            actionedSuggestions: 0
+        },
         stakeholders: [],
         childHcpList: [],
         allAccountMap: new Map(),
@@ -35,7 +47,7 @@ export const useAppStore = defineStore('app', {
         roleMap: new Map(),
         priorityMap: new Map(),
         specialtyMap: new Map(),
-        selectedDateRange: 'ninetyDays',
+        selectedDateRange: 90,
         trackEvent: false
     }),
     getters: {
@@ -49,9 +61,32 @@ export const useAppStore = defineStore('app', {
     },
     actions: {
         async loadData(i18n) {
+            this.loading = true;
             try {
                 // check if online or offline
                 this.setIsOnline(Utils.isOnline());
+
+                // Reset state to ensure clean reload
+                this.callList = [];
+                this.seList = [];
+                this.medEvtList = [];
+                this.suggestionList = [];
+                this.planTacticList = [];
+                this.acctTacticList = [];
+                this.actionItemList = [];
+                this.dashboardActionItems = [];
+                this.stakeholders = [];
+                this.childHcpList = [];
+                this.allAccountMap = new Map();
+                this.childHcpMap = new Map();
+                this.statusMap = new Map();
+                this.accountTacticMap = new Map();
+                this.actionItemMap = new Map();
+                this.progressMap = new Map();
+                this.roleMap = new Map();
+                this.priorityMap = new Map();
+                this.specialtyMap = new Map();
+                this.interactionSummary = { totalCalls: 0, avgAttendees: 0, callsWithMedia: 0, mediaUsed: 0, totalEmails: 0, emailClickRate: 0, pendingSuggestions: 0, actionedSuggestions: 0 };
 
                 // get available Objects
                 const availableObjects = await getAvailableObjects();
@@ -100,25 +135,43 @@ export const useAppStore = defineStore('app', {
                 this.setUser(await getUserDetail(), userTypeMap);
                 
                 //pass the userID here to query the user_territory
-                // set territory
-                this.setTerritory(await getUserTerritoryDetail([this.user.id]));
+                // set territories
+                // TODO: Update condition with proper user type check for manager
+                let isManager = false;
+                // eslint-disable-next-line
+                if(true) {
+                    isManager = true;
+                } else {
+                    isManager = false;
+                }
+                const userTerritories = await getUserTerritoryDetail([this.user.id], isManager);
+                this.setTerritories(userTerritories);
+                if(!this.territory.id && this.territories.length > 0) {
+                    this.territory.id = this.territories[0].id;
+                    this.territory.name = this.territories[0].name;
+                }
 
                 //set territory type
                 this.setTerritoryType(this.territory.name);
 
-                // set current account info
-                const acctRespObj = await getAccountDetail();
+                // set all account info
+                const acctRespObj = await getAccountDetail(this.territory.id);
+                console.log("AFTER getAccountDetail");
+                let allAcctIds = [];
                 if(acctRespObj && acctRespObj.acctList.length > 0) {
-                    const addressResp = await getAddress([acctRespObj.acctList[0].id]);
+                    allAcctIds = acctRespObj.acctList.map(a => a.id);
+                    const addressResp = await getAddress(allAcctIds);
                     this.setAccount(acctRespObj.acctList, acctRespObj.parentAcctList, addressResp, hcoTypeMap, this.priorityMap, doNotCallMap);
-                    this.allAccountMap.set(this.account.id, { name: this.account.name, isPerson: this.account.isPerson });
+                    acctRespObj.acctList.forEach(acct => {
+                        this.allAccountMap.set(acct.id, { name: acct.name__v, isPerson: (acct.ispersonaccount__v === 1 || acct.ispersonaccount__v === true) });
+                    });
                 }
 
-                // get calls for current hco
-                this.callList = await getCallInfo([this.account.id], activityTypeyMap, userTypeMap);
+                // get calls for current hcos
+                this.callList = await getCallInfo(allAcctIds, activityTypeyMap, userTypeMap);
 
-                // get suggestions, sent email for childs hcps of current hco
-                const childHcpResp = await getChildAccountInfo([this.account.id]);
+                // get suggestions, sent email for childs hcps of current hcos
+                const childHcpResp = await getChildAccountInfo(allAcctIds);
                 if(childHcpResp && childHcpResp.length > 0) {
                     childHcpResp.forEach(ch => {
                         this.childHcpList.push({
@@ -227,13 +280,19 @@ export const useAppStore = defineStore('app', {
                     } else if (this.territoryType.type === TEAM_IOVERA) {
                         pacTeam = 'iovera__c';
                     }
-                    const acctPlanResp = await getAccountPlan(this.account.id, pacTeam);
+                    const acctPlanResp = await getAccountPlans(allAcctIds, pacTeam);
                     if(acctPlanResp && acctPlanResp.length > 0) {
-                        this.acctPlan.id = acctPlanResp[0].id;
-                        this.acctPlan.name = acctPlanResp[0].name__v;
+                        let planIds = [];
+                        acctPlanResp.forEach(plan => {
+                            planIds.push(plan.id);
+                            if (!this.acctPlan.id) {
+                                this.acctPlan.id = plan.id;
+                                this.acctPlan.name = plan.name__v;
+                            }
+                        });
 
                         // get plan tactics
-                        const ptResp = await getPlanTactics(this.acctPlan.id);
+                        const ptResp = await getPlanTactics(planIds);
                         if(ptResp && ptResp.length > 0) {
                             let planTacticIds = [];
                             ptResp.forEach(item => {
@@ -258,10 +317,19 @@ export const useAppStore = defineStore('app', {
                         }
 
                         if(availableObjects.key_stakeholder__v) {
-                            this.setKeyStakeholders(await getKeyStakeholderInfo(this.acctPlan.id));
+                            this.setKeyStakeholders(await getKeyStakeholderInfo(planIds));
                         }
                     }
                 }
+
+                // Get KPIs for Interaction Summary
+                const summaryAcctIds = Array.from(this.allAccountMap.keys());
+                if (summaryAcctIds.length > 0) {
+                    this.interactionSummary = await getInteractionSummaryStats(summaryAcctIds, [this.user.id], this.selectedDateRange);
+                }
+
+                // Get Dashboard Action Items
+                this.dashboardActionItems = await getDashboardActionItemsInfo([this.user.id], this.actionItemMap);
 
                 /** TRACK EVENT */
                 this.trackEvent = true;
@@ -274,6 +342,13 @@ export const useAppStore = defineStore('app', {
                 this.showNotification = true;
             } finally {
                 this.loading = false;
+            }
+        },
+        async updateInteractionSummary(days) {
+            this.selectedDateRange = days;
+            const allAcctIds = Array.from(this.allAccountMap.keys());
+            if (allAcctIds.length > 0) {
+                this.interactionSummary = await getInteractionSummaryStats(allAcctIds, [this.user.id], this.selectedDateRange);
             }
         },
         setIsOnline(isOnline){
@@ -293,10 +368,19 @@ export const useAppStore = defineStore('app', {
                 this.user.userType = (userTypeMap && userTypeMap.has(userList[0].user_type__v)) ? userTypeMap.get(userList[0].user_type__v) : '';
             }
         },
-        setTerritory(territoryList) {
+        setTerritories(territoryList) {
             if(territoryList?.length) {
-                this.territory.id = territoryList[0].id;
-                this.territory.name = territoryList[0].name__v;
+                this.territories = territoryList.map(t => ({ id: t.id, name: t.name__v }));
+            } else {
+                this.territories = [];
+            }
+        },
+        async changeTerritory(territoryId, i18n) {
+            const selected = this.territories.find(t => t.id === territoryId);
+            if(selected && selected.id !== this.territory.id) {
+                this.territory.id = selected.id;
+                this.territory.name = selected.name;
+                await this.loadData(i18n);
             }
         },
         setTerritoryType(territoryName) {
