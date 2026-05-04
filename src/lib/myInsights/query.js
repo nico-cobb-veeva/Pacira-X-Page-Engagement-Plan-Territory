@@ -89,9 +89,7 @@ export const getTerritory = (territoryIds, isManager = false) => {
     const deferred = $q.defer();
 
     let whereClause = '';
-    // TODO: Utilize the passed isManager flag for the user type check
-    // eslint-disable-next-line
-    if(true) {
+    if(isManager) {
         whereClause = 'id IN ' + Utils.getInStatementArray(territoryIds) + ' OR parent_territory__v IN ' + Utils.getInStatementArray(territoryIds);
     } else {
         whereClause = 'id IN ' + Utils.getInStatementArray(territoryIds);
@@ -136,12 +134,12 @@ export const getUserTerritory = (userIds) => {
 }
 
 // get account territories
-export const getAccountTerritories = (territoryId) => {
+export const getAccountTerritories = (territoryIds) => {
     const deferred = $q.defer();
     const queryConfig = {
         object: 'account_territory__v',
         fields: ['account__v'],
-        where: `territory__v = '${territoryId}'`
+        where: `territory__v IN ${Utils.getInStatementArray(territoryIds)}`
     };
     ds.queryRecord(queryConfig).then(result => {
         console.log('getAccountTerritories()', result ? result[queryConfig.object] : []);
@@ -155,19 +153,28 @@ export const getAccountTerritories = (territoryId) => {
 };
 
 //get account detail
-export const getAccountInfo = (acctIds) => {
+export const getAccountInfo = (acctIds, isHcoOnly = false) => {
     const deferred = $q.defer();
+    let whereClause = 'id IN ' + Utils.getInStatementArray(acctIds);
+    if (isHcoOnly) {
+        whereClause += ' AND ispersonaccount__v = false';
+    }
+
     const queryConfig = {
         object: 'account__v',
         fields: ['id', 'name__v', 'ispersonaccount__v', 'pac_exparel_priority__c', 'pacira_primary_parent_name__c', 
                     'primary_parent__v', 'pac_iovera_priority__c', 'pac_zilretta_priority__c', 'net_hco_type__c', 'pacira_idn__c', 
                     'pacira_do_not_call_banner__c', 'website_cda__v', 'office_phone_cda__v', 'pacira_email__c', 'email_cda__v', 'secondary_email__c'],
-        where: 'id IN ' + Utils.getInStatementArray(acctIds),
+        where: whereClause,
         sort: ['name__v ASC']
     };
     ds.queryRecord(queryConfig).then(result => {
         console.log('getAccountInfo()', result[queryConfig.object]);
-        deferred.resolve(result[queryConfig.object]);
+        let data = result[queryConfig.object] || [];
+        if (isHcoOnly) {
+            data = data.filter(item => item.ispersonaccount__v === false || item.ispersonaccount__v === 0);
+        }
+        deferred.resolve(data);
     }, err => {
         console.log(err);
         deferred.resolve(null);
@@ -311,6 +318,9 @@ export const getMedicalEvents = (eventIds) => {
 
 // get suggestions
 export const getSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
+    console.log("NOW CALLING getSuggestions");
+    console.log(acctIds);
+    console.log(ownerIds);
     const today = Moment().format(SYSTEM_DATE_FORMAT);
     const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
@@ -342,6 +352,9 @@ export const getSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
 
 // get actioned suggestions
 export const getActionedSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
+    console.log("NOW CALLING getActionedSuggestions");
+    console.log(acctIds);
+    console.log(ownerIds);
     const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
     const queryConfig = {
@@ -358,6 +371,7 @@ export const getActionedSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
         data = data.filter(item => Moment(item.posted_date__v).isSameOrAfter(targetDate, 'day'));
         deferred.resolve(data);
     }, err => {
+        console.log("GET ACTIONED SUGGESTIONS ERROR HERE");
         console.log(err);
         deferred.resolve(null);
     });
@@ -460,11 +474,12 @@ export const getAccountTacticByMobileId = (mobileId) => {
 
 // get account tactic
 export const getActionItems = (acctTacticIds) => {
+    console.log("NOW CALLING getActionItems", acctTacticIds);
     const deferred = $q.defer();
     const queryConfig = {
         object: 'action_item__v',
         fields: ['id', 'name__v', 'pac_action_item__c', 'account_tactic__v', 'plan_tactic__v', 'action_item_status__v', 'due_date__v', 
-                    'completed_date__v', 'pac_progress__c', 'pac_action_item_marked_for_delete__c'],
+                    'completed_date__v', 'pac_progress__c', 'pac_action_item_marked_for_delete__c', 'modified_date__v'],
         where: 'account_tactic__v IN ' + Utils.getInStatementArray(acctTacticIds),
         sort: ['due_date__v ASC']
     };
@@ -472,6 +487,7 @@ export const getActionItems = (acctTacticIds) => {
         console.log('getActionItems()', result[queryConfig.object]);
         deferred.resolve(result[queryConfig.object]);
     }, err => {
+        console.log("GET ACTION ITEMS ERROR HERE");
         console.log(err);
         deferred.resolve(null);
     });
@@ -479,16 +495,14 @@ export const getActionItems = (acctTacticIds) => {
 };
 
 // get dashboard action items
-export const getDashboardActionItems = (ownerIds) => {
-    const today = Moment().format(SYSTEM_DATE_FORMAT);
+export const getDashboardActionItems = (planIds) => {
     const in30Days = Moment().add(30, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
     const queryConfig = {
         object: 'action_item__v',
         fields: ['id', 'name__v', 'pac_action_item__c', 'account_plan__v', 'ownerid__v', 'due_date__v', 'action_item_status__v', 'pac_action_item_marked_for_delete__c'],
-        where: `ownerid__v IN ${Utils.getInStatementArray(ownerIds)}
+        where: `account_plan__v IN ${Utils.getInStatementArray(planIds)}
                 AND action_item_status__v != 'completed__v'
-                AND due_date__v >= '${today}'
                 AND due_date__v <= '${in30Days}'`,
         sort: ['due_date__v ASC']
     };
@@ -569,12 +583,20 @@ export const executeSuggestionAction = (suggestionId, actionType) => {
 };
 
 // deep link for record detail view
-export const viewRecord = (sObject, recordId) => {
+export const viewRecord = (sObject, recordId, extId = null) => {
     const deferred = $q.defer();
-    const deepLink = {
+    let deepLink = {
         object: sObject,
-        fields: { id: recordId }
+        fields: { id: recordId },
     };
+
+    if(extId) {
+        deepLink = {
+            object: sObject,
+            fields: { id: recordId },
+            target: { external_id__v: extId}
+        };
+    }
     ds.viewRecord(deepLink).then(resp => {
         deferred.resolve(resp);
     }, err => {

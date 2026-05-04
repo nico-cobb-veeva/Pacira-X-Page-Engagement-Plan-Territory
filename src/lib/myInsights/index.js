@@ -60,16 +60,17 @@ export const getUserTerritoryDetail = (userId, isManager) => {
 };
 
 // current account detail
-export const getAccountDetail = (territoryId) => {
+export const getAccountDetail = (territoryIds) => {
     let acctResp = [];
-    return ds.getAccountTerritories(territoryId)
+    return partitionQuery(ds.getAccountTerritories, territoryIds)
     .then(atResp => {
         let acctIds = [];
         if(atResp && atResp.length > 0) {
             acctIds = atResp.map(at => at.account__v);
         }
-        console.log("BEFORE getAccountInfo");
-        return ds.getAccountInfo(acctIds);
+        console.log("BEFORE getAccountInfo acctIds");
+        console.log(acctIds);
+        return partitionQuery(ids => ds.getAccountInfo(ids, true), acctIds);
     }).then(aResp => {
         acctResp = aResp ? [...aResp] : [];
         let parentIds = [];
@@ -77,7 +78,7 @@ export const getAccountDetail = (territoryId) => {
             if(a.primary_parent__v) parentIds.push(a.primary_parent__v);
         });
         if (parentIds.length > 0) {
-            return ds.getAccountInfo(Array.from(new Set(parentIds)));
+            return partitionQuery(ids => ds.getAccountInfo(ids, true), Array.from(new Set(parentIds)));
         }
         return [];
     }).then(parentResp => {
@@ -88,13 +89,13 @@ export const getAccountDetail = (territoryId) => {
 
 // get child accounts
 export const getChildAccountInfo = (acctIds) => {
-    return ds.getChildAccounts(acctIds)
+    return partitionQuery(ds.getChildAccounts, acctIds)
     .then(chResp => {
         let childAcctIds = [];
         if(chResp && chResp.length > 0) {
-            childAcctIds = chResp.map(ch => ch.child_account__v);
+            childAcctIds = Array.from(new Set(chResp.map(ch => ch.child_account__v)));
         }
-        return ds.getAccountInfo(childAcctIds);
+        return childAcctIds.length > 0 ? partitionQuery(ds.getAccountInfo, childAcctIds) : [];
     }).then(acctResp => {
         return acctResp;
     });
@@ -287,8 +288,8 @@ const processEventResponse = (events, eventTypeMap, ownerMap, userTypeMap) => {
 }
 
 // get suggestion info
-export const getSuggestionInfo = (accountMap, userIds) => {
-    return ds.getSuggestions(Array.from(accountMap.keys()), userIds)
+export const getSuggestionInfo = (acctIds, accountMap, userIds) => {
+    return ds.getSuggestions(acctIds, userIds)
     .then(suggResp => {
         return processSuggestionResponse(suggResp, accountMap);
     });
@@ -388,6 +389,12 @@ export const getKeyStakeholderInfo = (acctPlanIds) => {
 };
 
 const processKeyStakeholderResponse = (keyStakeholders, accountMap, callMap, sentEmailMap, addressMap) => {
+    console.log("entering key stakeholder process");
+    console.log(keyStakeholders);
+    console.log(accountMap);
+    console.log(callMap);
+    console.log(sentEmailMap);
+    console.log(addressMap);
     let retList = [];
     if(keyStakeholders && keyStakeholders.length > 0) {
         keyStakeholders.map(ks => {
@@ -417,18 +424,21 @@ const processKeyStakeholderResponse = (keyStakeholders, accountMap, callMap, sen
 
 // get interaction summary aggregated stats
 export const getInteractionSummaryStats = (acctIds, ownerIds, daysAgo = 90) => {
+    console.log("entering getInteractionSummaryStats");
+    console.log(acctIds);
+    console.log(ownerIds);
     return window.Q.all([
-        ds.getSubmittedCalls(acctIds, daysAgo),
-        ds.getSentEmails(acctIds, daysAgo),
-        ds.getSuggestions(acctIds, ownerIds, daysAgo),
-        ds.getActionedSuggestions(acctIds, ownerIds, daysAgo)
+            partitionQuery(ids => ds.getSubmittedCalls(ids, daysAgo), acctIds),
+            partitionQuery(ids => ds.getSentEmails(ids, daysAgo), acctIds),
+            partitionQuery(ids => ds.getSuggestions(ids, ownerIds, daysAgo), acctIds),
+            partitionQuery(ids => ds.getActionedSuggestions(ids, ownerIds, daysAgo), acctIds)
     ]).then(([calls, emails, pendingSuggestions, actionedSuggestions]) => {
         let callIds = [];
         if(calls && calls.length > 0) {
             callIds = calls.map(c => c.id);
         }
 
-        let childCallsPromise = callIds.length > 0 ? ds.getChildSubmittedCalls(callIds, daysAgo) : window.Q.resolve([]);
+            let childCallsPromise = callIds.length > 0 ? partitionQuery(ids => ds.getChildSubmittedCalls(ids, daysAgo), callIds) : window.Q.resolve([]);
 
         return childCallsPromise.then(childCalls => {
             const totalCalls = calls ? calls.length : 0;
@@ -460,12 +470,45 @@ export const getInteractionSummaryStats = (acctIds, ownerIds, daysAgo = 90) => {
     });
 };
 
-// get action items info for dashboard
-export const getDashboardActionItemsInfo = (ownerIds, actionItemMap) => {
-    let actionItems = [], planIds = [], ownerIdsToFetch = [];
-    let planMap = new Map(), accountMap = new Map(), userMap = new Map();
+// get engagement plan summary
+export const getEngagementPlanSummaryData = (acctIds, pacTeam) => {
+    let rawPlans = [], rawPlanTactics = [], rawAccountTactics = [], rawActionItems = [];
+    return partitionQuery(ids => ds.getAccountPlans(ids, pacTeam), acctIds)
+    .then(plans => {
+        if (plans && plans.length > 0) {
+            rawPlans = plans;
+            return partitionQuery(ds.getPlanTactics, rawPlans.map(p => p.id));
+        }
+        return window.Q.resolve([]);
+    })
+    .then(ptResp => {
+        if (ptResp && ptResp.length > 0) {
+            rawPlanTactics = ptResp;
+            return partitionQuery(ds.getAccountTactics, rawPlanTactics.map(pt => pt.id));
+        }
+        return window.Q.resolve([]);
+    })
+    .then(atResp => {
+        if (atResp && atResp.length > 0) {
+            rawAccountTactics = atResp;
+            return partitionQuery(ds.getActionItems, rawAccountTactics.map(at => at.id));
+        }
+        return window.Q.resolve([]);
+    })
+    .then(aiResp => {
+        if (aiResp && aiResp.length > 0) {
+            rawActionItems = aiResp;
+        }
+        return { rawPlans, rawPlanTactics, rawAccountTactics, rawActionItems };
+    });
+};
 
-    return ds.getDashboardActionItems(ownerIds)
+// get action items info for dashboard
+export const getDashboardActionItemsInfo = (planIds, actionItemMap) => {
+    let actionItems = [], foundPlanIds = [];
+    let planMap = new Map(), accountMap = new Map();
+
+    return partitionQuery(ds.getDashboardActionItems, planIds)
     .then(aiResp => {
         if(aiResp && aiResp.length > 0) {
             aiResp.forEach(ai => {
@@ -476,12 +519,11 @@ export const getDashboardActionItemsInfo = (ownerIds, actionItemMap) => {
                 }
                 if(isMarkedForDelete === false) {
                     actionItems.push(ai);
-                    if(ai.account_plan__v) planIds.push(ai.account_plan__v);
-                    if(ai.ownerid__v) ownerIdsToFetch.push(ai.ownerid__v);
+                    if(ai.account_plan__v) foundPlanIds.push(ai.account_plan__v);
                 }
             });
         }
-        return planIds.length > 0 ? ds.getAccountPlansByIds(Array.from(new Set(planIds))) : window.Q.resolve([]);
+        return foundPlanIds.length > 0 ? partitionQuery(ds.getAccountPlansByIds, Array.from(new Set(foundPlanIds))) : window.Q.resolve([]);
     }).then(planResp => {
         let acctIds = [];
         if(planResp && planResp.length > 0) {
@@ -490,15 +532,10 @@ export const getDashboardActionItemsInfo = (ownerIds, actionItemMap) => {
                 if(p.account__v) acctIds.push(p.account__v);
             });
         }
-        return acctIds.length > 0 ? ds.getAccountInfo(Array.from(new Set(acctIds))) : window.Q.resolve([]);
+        return acctIds.length > 0 ? partitionQuery(ds.getAccountInfo, Array.from(new Set(acctIds))) : window.Q.resolve([]);
     }).then(acctResp => {
         if(acctResp && acctResp.length > 0) {
             acctResp.forEach(a => accountMap.set(a.id, a.name__v));
-        }
-        return ownerIdsToFetch.length > 0 ? ds.getUserInfo(Array.from(new Set(ownerIdsToFetch))) : window.Q.resolve([]);
-    }).then(userResp => {
-        if(userResp && userResp.length > 0) {
-            userResp.forEach(u => userMap.set(u.id, u.name__v));
         }
         return actionItems.map(ai => {
             const acctId = planMap.get(ai.account_plan__v);
@@ -509,8 +546,8 @@ export const getDashboardActionItemsInfo = (ownerIds, actionItemMap) => {
             return {
                 id: ai.id,
                 name: itemName,
+                accountId: acctId,
                 accountName: (acctId && accountMap.has(acctId)) ? accountMap.get(acctId) : NO_DATA,
-                assignee: (ai.ownerid__v && userMap.has(ai.ownerid__v)) ? userMap.get(ai.ownerid__v) : NO_DATA,
                 dueDate: (ai.due_date__v) ? Moment(ai.due_date__v).format(DISPLAY_DATE_FORMAT) : NO_DATA
             };
         });

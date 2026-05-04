@@ -19,5 +19,7 @@ export const TEAM_OMFS = 'D';
 export const ZILRETTA_HIGH_PRIORITY = 2;
 export const ZILRETTA_MEDIUM_PRIORITY = 1;
 export const ZILRETTA_LOW_PRIORITY = 0;
+
+export const MANAGER_PROFILES = ['1 - Pacira - Sales Management', '0 - Pacira - Core Sales Manager'];
 //separate for blank (if low priority, just switch to -- )
 

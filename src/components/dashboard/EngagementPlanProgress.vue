@@ -35,13 +35,38 @@
     import { storeToRefs } from 'pinia';
 
     const store = useAppStore();
-    const { actionItemList } = storeToRefs(store);
+    const { actionItemList, rawPlans, rawPlanTactics, rawAccountTactics, activeTerritoryAccountIds } = storeToRefs(store);
+
+    const validAccountTacticIds = computed(() => {
+        const acctIds = new Set(activeTerritoryAccountIds.value || []);
+        
+        const validPlanIds = new Set(
+            (rawPlans.value || [])
+            .filter(p => acctIds.has(p.account__v))
+            .map(p => p.id)
+        );
+
+        const validPtIds = new Set(
+            (rawPlanTactics.value || [])
+            .filter(pt => validPlanIds.has(pt.account_plan__v))
+            .map(pt => pt.id)
+        );
+
+        const validAtIds = new Set(
+            (rawAccountTactics.value || [])
+            .filter(at => validPtIds.has(at.plan_tactic__v))
+            .map(at => at.id)
+        );
+
+        return validAtIds;
+    });
 
     const progressStats = computed(() => {
-        const total = (actionItemList.value || []).length;
+        const filteredItems = (actionItemList.value || []).filter(ai => validAccountTacticIds.value.has(ai.accountTacticId));
+        const total = filteredItems.length;
         let completed = 0, inProgress = 0, notStarted = 0;
 
-        (actionItemList.value || []).forEach(ai => {
+        filteredItems.forEach(ai => {
             if (ai.statusApi === 'completed__v') completed++;
             else if (ai.statusApi === 'pending__v') inProgress++;
             else notStarted++;

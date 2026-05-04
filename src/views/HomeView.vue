@@ -2,7 +2,7 @@
     <div class="container-fluid py-3 px-3 bg-light" style="min-height: 100vh;">
         
         <!-- Top controls -->
-        <div class="row mb-3">
+        <div class="row mb-3" v-if="isManager">
             <div class="col d-flex justify-content-end align-items-center">
                 <span class="me-2 fw-bold text-secondary">Territory</span>
                 <select class="form-select form-select-sm" style="width: auto;" v-model="selectedTerritoryId" @change="handleTerritoryChange">
@@ -49,7 +49,7 @@
 
     const store = useAppStore();
     const { t } = useI18n();
-    const { territories, territory } = storeToRefs(store);
+    const { territories, territory, isManager } = storeToRefs(store);
 
     const selectedTerritoryId = ref('');
 

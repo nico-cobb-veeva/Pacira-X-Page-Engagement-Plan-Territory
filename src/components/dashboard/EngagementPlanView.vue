@@ -17,40 +17,41 @@
             <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
                 <thead class="table-light text-muted small">
                     <tr>
-                        <th class="fw-normal py-2 ps-3">ENGAGEMENT PLAN</th>
-                        <th class="fw-normal">ACCOUNT</th>
-                        <th class="fw-normal"># OBJECTIVES</th>
-                        <th class="fw-normal"># ACTION ITEMS</th>
-                        <th class="fw-normal" style="min-width: 9.375rem;">PROGRESS</th>
-                        <th class="fw-normal text-center">NO ACTIVITIES<br><span style="font-size:0.7rem">(last 30 days)</span></th>
-                        <th class="fw-normal text-center">ACHIEVEMENTS<br><span style="font-size:0.7rem">(completed in 15 days)</span></th>
-                        <th class="fw-normal text-center">LINK PROFILE</th>
+                        <th class="fw-normal py-2 ps-3 border-end">ENGAGEMENT PLAN</th>
+                        <th class="fw-normal border-end">ACCOUNT</th>
+                        <th class="fw-normal text-nowrap border-end"># OBJECTIVES</th>
+                        <th class="fw-normal text-nowrap border-end"># ACTION ITEMS</th>
+                        <th class="fw-normal border-end" style="min-width: 9.375rem;">PROGRESS</th>
+                        <th class="fw-normal text-center border-end">NO ACTIVITIES<br><span style="font-size:0.7rem">(last 30 days)</span></th>
+                        <th class="fw-normal text-center border-end">ACHIEVEMENTS<br><span style="font-size:0.7rem">(completed in 15 days)</span></th>
+                        <th class="fw-normal text-center">LKA PROFILE</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-if="engagementPlans.length === 0">
+                    <tr v-if="isLoading">
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Loading engagement plans...
+                        </td>
+                    </tr>
+                    <tr v-else-if="engagementPlans.length === 0">
                         <td colspan="8" class="text-center py-4 text-muted">No engagement plans found</td>
                     </tr>
-                    <tr v-for="plan in engagementPlans" :key="plan.id">
-                        <td class="text-primary ps-3">{{ plan.name }}</td>
-                        <td class="text-primary">{{ plan.accountName }}</td>
-                        <td>{{ plan.numObjectives }}</td>
-                        <td>{{ plan.numActionItems }}</td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="progress me-2" style="height: 0.5rem; width: 6rem; flex-shrink: 0;">
-                                    <div class="progress-bar bg-primary" role="progressbar" :style="{ width: plan.progress + '%' }"></div>
-                                </div>
-                                <span class="fw-bold me-1 text-end" style="width: 3rem; display: inline-block; white-space: nowrap;">{{ plan.progress }}%</span> 
-                                <span class="text-muted small" style="white-space: nowrap;">({{ plan.completedActionItems }}/{{ plan.numActionItems }})</span>
-                            </div>
-                        </td>
-                        <td class="text-center"></td>
-                        <td class="text-center">
-                            <span v-if="plan.completedActionItems > 0" class="badge bg-success rounded-circle p-2">{{ plan.completedActionItems }}</span>
-                        </td>
-                        <td class="text-center"><a href="#" class="text-decoration-none">View</a></td>
-                    </tr>
+                    <EngagementPlanViewListItem 
+                        v-else
+                        v-for="plan in engagementPlans" 
+                        :key="plan.accountPlan.id"
+                        :accountPlan="plan.accountPlan"
+                        :account="plan.account"
+                        :planTactic="plan.planTactic"
+                        :accountName="plan.accountName"
+                        :numObjectives="plan.numObjectives"
+                        :numActionItems="plan.numActionItems"
+                        :completedActionItems="plan.completedActionItems"
+                        :progress="plan.progress"
+                        :noActivity="plan.noActivity"
+                        :recentAchievements="plan.recentAchievements"
+                    />
                 </tbody>
             </table>
         </div>
@@ -59,43 +60,98 @@
 
 <script setup>
 //TODO: come apply veeva messages
-    import { computed, ref, onMounted } from 'vue';
+    import { computed, ref } from 'vue';
+    import Moment from 'moment';
     import { useAppStore } from '@/store/app';
     import { storeToRefs } from 'pinia';
 
+    import EngagementPlanViewListItem from '@/components/dashboard/EngagementPlanViewListItem.vue';
+
     const store = useAppStore();
-    const { acctTacticList, actionItemList, planTacticList, currAccount } = storeToRefs(store);
+    const { planTacticList, rawPlans, rawPlanTactics, rawAccountTactics, rawActionItems, allAccountMap, isLoading, activeTerritoryAccountIds } = storeToRefs(store);
 
     const selectedPlanTactic = ref('all');
     const searchQuery = ref('');
 
     const engagementPlans = computed(() => {
-        let tactics = acctTacticList.value || [];
+        const results = [];
+        const sq = searchQuery.value.toLowerCase();
+        const activeAccountIdsSet = new Set(activeTerritoryAccountIds.value || []);
+        const thirtyDaysAgo = Moment().subtract(30, 'days').startOf('day');
+        const fifteenDaysAgo = Moment().subtract(15, 'days').startOf('day');
 
-        if (selectedPlanTactic.value !== 'all' && selectedPlanTactic.value !== '') {
-            tactics = tactics.filter(t => t.planTacticId === selectedPlanTactic.value);
-        }
+        (rawPlans.value || []).forEach(plan => {
+            if (!activeAccountIdsSet.has(plan.account__v)) {
+                return;
+            }
 
-        if (searchQuery.value) {
-            const lowerQuery = searchQuery.value.toLowerCase();
-            tactics = tactics.filter(t => t.name && t.name.toLowerCase().includes(lowerQuery));
-        }
+            const account = allAccountMap.value.get(plan.account__v);
+            const accountName = account ? account.name : 'Unknown Account';
 
-        return tactics.map(tactic => {
-            const aiList = (actionItemList.value || []).filter(ai => ai.accountTacticId === tactic.id);
-            const totalAi = aiList.length;
-            const completedAi = aiList.filter(ai => ai.statusApi === 'completed__v').length;
-            const progress = totalAi > 0 ? Math.round((completedAi / totalAi) * 100) : 0;
+            if (sq) {
+                const pName = plan.name__v ? plan.name__v.toLowerCase() : '';
+                const aName = accountName.toLowerCase();
+                if (!pName.includes(sq) && !aName.includes(sq)) {
+                    return;
+                }
+            }
 
-            return {
-                id: tactic.id,
-                name: tactic.name,
-                accountName: currAccount.value.name || 'Unknown Account',
-                numObjectives: 1, // Defaulted to 1 as AccountTactics map to a singular objective in this framework
-                numActionItems: totalAi,
-                completedActionItems: completedAi,
-                progress: progress
-            };
+            const myPlanTactics = (rawPlanTactics.value || []).filter(pt => pt.account_plan__v === plan.id);
+            const myPtIds = myPlanTactics.map(pt => pt.id);
+
+            let myAccountTactics = (rawAccountTactics.value || []).filter(at => 
+                myPtIds.includes(at.plan_tactic__v) && 
+                at.pac_objective_marked_for_delete__c !== 1 && 
+                at.pac_objective_marked_for_delete__c !== true
+            );
+
+            if (selectedPlanTactic.value !== 'all') {
+                const matchingPtIds = myPlanTactics
+                    .filter(pt => pt.name__v === selectedPlanTactic.value)
+                    .map(pt => pt.id);
+                    
+                myAccountTactics = myAccountTactics.filter(at => matchingPtIds.includes(at.plan_tactic__v));
+            }
+
+            const myAtIds = myAccountTactics.map(at => at.id);
+
+            const myActionItems = (rawActionItems.value || []).filter(ai => 
+                myAtIds.includes(ai.account_tactic__v) && 
+                ai.pac_action_item_marked_for_delete__c !== 1 && 
+                ai.pac_action_item_marked_for_delete__c !== true
+            );
+
+            const hasRecentActivity = myActionItems.some(ai => {
+                const activityDate = ai.modified_date__v
+                return activityDate && Moment(activityDate).isValid() && Moment(activityDate).isSameOrAfter(thirtyDaysAgo, 'day');
+            });
+
+            const recentAchievements = myActionItems.filter(ai => {
+                const modDate = ai.modified_date__v;
+                return ai.action_item_status__v === 'completed__v' && 
+                       modDate && Moment(modDate).isValid() && 
+                       Moment(modDate).isSameOrAfter(fifteenDaysAgo, 'day');
+            }).length;
+
+            const numObjectives = myAccountTactics.length;
+            const numActionItems = myActionItems.length;
+            const completedActionItems = myActionItems.filter(ai => ai.action_item_status__v === 'completed__v').length;
+            const progress = numActionItems > 0 ? Math.round((completedActionItems / numActionItems) * 100) : 0;
+
+            results.push({
+                accountPlan: plan,
+                account: account || {},
+                planTactic: selectedPlanTactic.value,
+                accountName: accountName,
+                numObjectives,
+                numActionItems,
+                completedActionItems,
+                progress,
+                noActivity: !hasRecentActivity,
+                recentAchievements
+            });
         });
+
+        return results;
     });
 </script>

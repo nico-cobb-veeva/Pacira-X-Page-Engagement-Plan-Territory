@@ -113,6 +113,7 @@ export const getAvailableObjects = () => {
         data: {
             user__sys: {},
             account__v: {},
+            account_territory__v: {},
             suggestion__v: {},
             account_plan__v: {},
             plan_tactic__v: {},
@@ -194,6 +195,17 @@ export const queryRecord = {
                 parent_territory__v: 'terr1'
             }
         ]
+    },
+    account_territory__v: {
+        account_territory__v: [
+            { account__v: "V4T000000001000", territory__v: "terr1" },
+            { account__v: "V4T000000001001", territory__v: "terr1" },
+            { account__v: "V4T000000001002", territory__v: "terr2" },
+            { account__v: "V4T000000001003", territory__v: "terr3" },
+            { account__v: "V4T000000001004", territory__v: "terr1" }
+        ],
+        success: true,
+        record_count: 5
     },
     account__v: {
         account__v: [
@@ -559,27 +571,51 @@ export const queryRecord = {
     account_plan__v: {
         account_plan__v: [{
             id: "ap1",
-            name__v: "Chilton Hospital - 2025 Plan"
+            name__v: "Chilton Hospital - 2026 Plan",
+            account__v: "V4T000000001000",
+            pac_team__c: "exparel_core__c"
+        }, {
+            id: "ap2",
+            name__v: "John Smith - 2026 Plan",
+            account__v: "V4T000000001002",
+            pac_team__c: "exparel_core__c"
+        }, {
+            id: "ap3",
+            name__v: "Clinton Ackerman - 2026 Plan",
+            account__v: "V4T000000001003",
+            pac_team__c: "exparel_core__c"
         }],
         "success":true,
-        "record_count":1
+        "record_count":3
     },
     plan_tactic__v: {
         plan_tactic__v: [{
             id: "pt1",
-            name__v: "Facility Level"
+            name__v: "Facility Level",
+            account_plan__v: "ap1"
         }, {
             id: "pt2",
-            name__v: "Orthopedic Forearm Wrist"
+            name__v: "Orthopedic Forearm Wrist",
+            account_plan__v: "ap1"
         }, {
             id: "pt3",
-            name__v: "Orthopedic Hip"
+            name__v: "Orthopedic Hip",
+            account_plan__v: "ap1"
         }, {
             id: "pt4",
-            name__v: "Orthopedic Knee"
+            name__v: "Orthopedic Knee",
+            account_plan__v: "ap1"
+        }, {
+            id: "pt5",
+            name__v: "Facility Level",
+            account_plan__v: "ap2"
+        }, {
+            id: "pt6",
+            name__v: "Facility Level",
+            account_plan__v: "ap3"
         }],
         "success":true,
-        "record_count":4
+        "record_count":6
     },
     account_tactic__v: {
         account_tactic__v: [{
@@ -645,9 +681,23 @@ export const queryRecord = {
             plan_tactic__v: "pt3",
             pac_objective_marked_for_delete__c: 0,
             account_tactic_status__v: 'not_started__c'
+        }, {
+            id: "at10",
+            name__v: "Surgeon Support",
+            pac_objective__c: "surgeon_support",
+            plan_tactic__v: "pt5",
+            pac_objective_marked_for_delete__c: 0,
+            account_tactic_status__v: 'pending__v'
+        }, {
+            id: "at11",
+            name__v: "Education & In-Service Training",
+            pac_objective__c: "education_inservice_training__c",
+            plan_tactic__v: "pt6",
+            pac_objective_marked_for_delete__c: 0,
+            account_tactic_status__v: 'not_started__c'
         }],
         "success":true,
-        "record_count":9
+        "record_count":11
     },
     action_item__v: {
         action_item__v: [{
@@ -901,6 +951,7 @@ export const queryRecord = {
             action_item_status__v: "completed__v",
             due_date__v: "2025-12-15",
             completed_date__v: '2025-08-08',
+            modified_date__v: '2026-04-20',
             pac_progress__c: 'green__c',
             pac_action_item_marked_for_delete__c: null
         }, {
@@ -958,9 +1009,45 @@ export const queryRecord = {
             completed_date__v: null,
             pac_progress__c: null,
             pac_action_item_marked_for_delete__c: null
+        }, {
+            id: "act26",
+            name__v: "Awareness of clinical/economic rationale",
+            pac_action_item__c: 'awareness_of_clinicaleconomic_rationale__c',
+            account_tactic__v: "at10",
+            plan_tactic__v: "pt5",
+            action_item_status__v: "not_started__c",
+            due_date__v: "2026-05-15",
+            completed_date__v: null,
+            modified_date__v: "2026-02-01",
+            pac_progress__c: null,
+            pac_action_item_marked_for_delete__c: null
+        }, {
+            id: "act27",
+            name__v: "Understanding of risk-benefit from patient satisfaction and throughput perspective",
+            pac_action_item__c: 'understanding_of_riskbenefit__c',
+            account_tactic__v: "at10",
+            plan_tactic__v: "pt5",
+            action_item_status__v: "pending__v",
+            due_date__v: "2026-05-15",
+            completed_date__v: null,
+            modified_date__v: "2026-02-15",
+            pac_progress__c: null,
+            pac_action_item_marked_for_delete__c: null
+        }, {
+            id: "act28",
+            name__v: "Signed-off on budget impact or approved trial use",
+            pac_action_item__c: 'signedoff_on_budget_impact_or_approved__c',
+            account_tactic__v: "at11",
+            plan_tactic__v: "pt6",
+            action_item_status__v: "completed__v",
+            due_date__v: "2026-04-20",
+            completed_date__v: "2026-04-22",
+            modified_date__v: "2026-04-25",
+            pac_progress__c: 'green__c',
+            pac_action_item_marked_for_delete__c: null
         }],
         "success":true,
-        "record_count":25
+        "record_count":28
     },
     key_stakeholder__v: {
         key_stakeholder__v: [{
