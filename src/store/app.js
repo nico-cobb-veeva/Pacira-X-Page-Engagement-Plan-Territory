@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import { partitionQuery, getUserDetail, getAccountDetail, getCallInfo, getSentEmailInfo, getSuggestionInfo, getKeyStakeholderInfo, getEventInfo, getChildAccountInfo, getUserTerritoryDetail, getInteractionSummaryStats, getDashboardActionItemsInfo, getEngagementPlanSummaryData } from '@/lib/myInsights/index';
-import { getAddress, getPicklistValueLabels, getObjectTypes, getAccountPlans, getPlanTactics, getAccountTactics, getActionItems, getUserTerritory, getAccountTerritories } from '@/lib/myInsights/query';
+import { partitionQuery, getUserDetail, getAccountDetail, getCallInfo, getSentEmailInfo, getSuggestionInfo, getKeyStakeholderInfo, getEventInfo, getChildAccountInfo, getUserTerritoryDetail, getDashboardActionItemsInfo, getEngagementPlanSummaryData } from '@/lib/myInsights/index';
+import { getAddress, getPicklistValueLabels, getObjectTypes, getAccountPlans, getPlanTactics, getAccountTactics, getActionItems, getUserTerritory, getAccountTerritories, getActionedSuggestions } from '@/lib/myInsights/query';
 import { NO_DATA, DISPLAY_DATE_FORMAT, SYSTEM_DATE_FORMAT, TEAM_EXPAREL, TEAM_IOVERA, TEAM_ZILRETTA, TEAM_OMFS, MANAGER_PROFILES } from '@/lib/helper/constants';
 import * as Utils from '@/lib/helper/commonUtils';
 import Moment from 'moment';
@@ -30,6 +30,7 @@ export const useAppStore = defineStore('app', {
         rawPlanTactics: [],
         rawAccountTactics: [],
         rawActionItems: [],
+        actionedSuggestions: [],
         interactionSummary: {
             totalCalls: 0,
             avgAttendees: 0,
@@ -52,6 +53,11 @@ export const useAppStore = defineStore('app', {
         roleMap: new Map(),
         priorityMap: new Map(),
         specialtyMap: new Map(),
+        userTypeMap: new Map(),
+        hcoTypeMap: new Map(),
+        activityTypeMap: new Map(),
+        doNotCallMap: new Map(),
+        eventTypeMap: new Map(),
         selectedDateRange: 90,
         trackEvent: false
     }),
@@ -73,55 +79,36 @@ export const useAppStore = defineStore('app', {
                 this.setIsOnline(Utils.isOnline());
 
                 // Reset state to ensure clean reload
-                this.callList = [];
-                this.seList = [];
-                this.medEvtList = [];
-                this.suggestionList = [];
-                this.planTacticList = [];
-                this.acctTacticList = [];
-                this.actionItemList = [];
-                this.dashboardActionItems = [];
-                this.rawPlans = [];
-                this.rawPlanTactics = [];
-                this.rawAccountTactics = [];
-                this.rawActionItems = [];
-                this.stakeholders = [];
-                this.childHcpList = [];
-                this.activeTerritoryAccountIds = [];
-                this.allAccountMap = new Map();
-                this.childHcpMap = new Map();
+                this.userTypeMap = new Map();
+                this.hcoTypeMap = new Map();
+                this.activityTypeMap = new Map();
+                this.doNotCallMap = new Map();
+                this.eventTypeMap = new Map();
                 this.statusMap = new Map();
-                this.accountTacticMap = new Map();
-                this.actionItemMap = new Map();
                 this.progressMap = new Map();
                 this.roleMap = new Map();
                 this.priorityMap = new Map();
                 this.specialtyMap = new Map();
-                this.interactionSummary = { totalCalls: 0, avgAttendees: 0, callsWithMedia: 0, mediaUsed: 0, totalEmails: 0, emailClickRate: 0, pendingSuggestions: 0, actionedSuggestions: 0 };
 
                 // get picklist values
-                let userTypeMap, hcoTypeMap, priorityMap, specialtyMap, activityTypeyMap, doNotCallMap;
-
                 // user type
                 let picklistResp = await getPicklistValueLabels('user__sys', 'user_type__v');
                 if(picklistResp) {
-                    userTypeMap = new Map(picklistResp);
+                    this.userTypeMap = new Map(picklistResp);
                 }
 
                 // hco type
                 picklistResp = await getPicklistValueLabels('account__v', 'net_hco_type__c');
                 if(picklistResp) {
-                    hcoTypeMap = new Map(picklistResp);
+                    this.hcoTypeMap = new Map(picklistResp);
                 }
 
-                //TODO: remove
                 // product priority
                 picklistResp = await getPicklistValueLabels('account__v', 'pac_exparel_priority__c');
                 if(picklistResp) {
                     this.priorityMap = new Map(picklistResp);
                 }
 
-                //TODO: remove
                 // account specialty
                 picklistResp = await getPicklistValueLabels('account__v', 'specialty_1__v');
                 if(picklistResp) {
@@ -131,18 +118,40 @@ export const useAppStore = defineStore('app', {
                 // call activity type
                 picklistResp = await getPicklistValueLabels('call2__v', 'activity_type__c');
                 if(picklistResp) {
-                    activityTypeyMap = new Map(picklistResp);
+                    this.activityTypeMap = new Map(picklistResp);
                 }
 
-                //TODO: remove
                 // do not call banner
                 picklistResp = await getPicklistValueLabels('account__v', 'pacira_do_not_call_banner__c');
                 if(picklistResp) {
-                    doNotCallMap = new Map(picklistResp);
+                    this.doNotCallMap = new Map(picklistResp);
+                }
+
+                // event type
+                picklistResp = await getPicklistValueLabels('medical_event__v', 'event_type__v');
+                if(picklistResp) {
+                    this.eventTypeMap = new Map(picklistResp);
+                }
+
+                // account tactic/action item status picklist
+                picklistResp = await getPicklistValueLabels('account_tactic__v', 'account_tactic_status__v');
+                if(picklistResp) {
+                    this.statusMap = new Map(picklistResp);
+                }
+
+                picklistResp = await getPicklistValueLabels('action_item__v', 'pac_progress__c');
+                if(picklistResp) {
+                    this.progressMap = new Map(picklistResp);
+                }
+
+                // key stakeholder role picklist
+                picklistResp = await getPicklistValueLabels('key_stakeholder__v', 'role__v');
+                if(picklistResp) {
+                    this.roleMap = new Map(picklistResp);
                 }
 
                 // set user
-                this.setUser(await getUserDetail(), userTypeMap);
+                this.setUser(await getUserDetail(), this.userTypeMap);
                 
                 //pass the userID here to query the user_territory
                 // set territories
@@ -178,14 +187,14 @@ export const useAppStore = defineStore('app', {
                 if(acctList.length > 0) {
                     allAcctIds = acctList.map(a => a.id);
                     const addressResp = await partitionQuery(getAddress, allAcctIds);
-                    this.setAccount(acctList, parentAcctList, addressResp, hcoTypeMap, this.priorityMap, doNotCallMap);
+                    this.setAccount(acctList, parentAcctList, addressResp, this.hcoTypeMap, this.priorityMap, this.doNotCallMap);
                     acctList.forEach(acct => {
                         this.allAccountMap.set(acct.id, { id: acct.id, name: acct.name__v, isPerson: (acct.ispersonaccount__v === 1 || acct.ispersonaccount__v === true) });
                     });
                 }
 
                 // get calls for current hcos
-                this.callList = await partitionQuery(ids => getCallInfo(ids, activityTypeyMap, userTypeMap), allAcctIds);
+                this.callList = await partitionQuery(ids => getCallInfo(ids, this.activityTypeMap, this.userTypeMap), allAcctIds);
 
                 // get suggestions, sent email for childs hcps of current hcos
                 const childHcpResp = await getChildAccountInfo(allAcctIds);
@@ -206,15 +215,11 @@ export const useAppStore = defineStore('app', {
                     });
 
                     // get sent emails
-                    this.seList = await partitionQuery(ids => getSentEmailInfo(ids, userTypeMap), Array.from(this.childHcpMap.keys()));
+                    const allEmailAcctIds = Array.from(new Set([...allAcctIds, ...Array.from(this.childHcpMap.keys())]));
+                    this.seList = await partitionQuery(ids => getSentEmailInfo(ids, this.userTypeMap), allEmailAcctIds);
 
                     // get events
-                    let eventTypeMap = new Map();
-                    picklistResp = await getPicklistValueLabels('medical_event__v', 'event_type__v');
-                    if(picklistResp) {
-                        eventTypeMap = new Map(picklistResp);
-                    }
-                    this.medEvtList = await partitionQuery(ids => getEventInfo(ids, eventTypeMap, userTypeMap), Array.from(this.childHcpMap.keys()));
+                    this.medEvtList = await partitionQuery(ids => getEventInfo(ids, this.eventTypeMap, this.userTypeMap), Array.from(this.childHcpMap.keys()));
                 }
 
                 // get suggestions
@@ -335,15 +340,18 @@ export const useAppStore = defineStore('app', {
                 const activeTerritoryResp = await partitionQuery(getAccountTerritories, [this.territory.id]);
                 this.activeTerritoryAccountIds = activeTerritoryResp ? activeTerritoryResp.map(at => at.account__v) : [];
 
-                // Get KPIs for Interaction Summary
-                const summaryAcctIds = this.activeTerritoryAccountIds;
-                if (summaryAcctIds.length > 0) {
-                    this.interactionSummary = await getInteractionSummaryStats(summaryAcctIds, [this.user.id], this.selectedDateRange);
-                }
+                const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
+                const epAccountIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.account__v) : [];
+                console.log("Account IDS and rawPlans");
+                console.log(epAccountIds);
+                console.log(this.rawPlans);
+
+                // Get Actioned Suggestions for KPI
+                this.actionedSuggestions = await partitionQuery(ids => getActionedSuggestions(ids, [this.user.id], 90), epAccountIds);
+                this.updateInteractionSummary(this.selectedDateRange);
 
                 // Get Dashboard Action Items
                 console.log("BEFORE GET ACTION ITEMS:", this.actionItemMap);
-                const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
                 const planIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.id) : [];
                 if (planIds.length > 0) {
                     this.dashboardActionItems = await getDashboardActionItemsInfo(planIds, this.actionItemMap);
@@ -367,11 +375,75 @@ export const useAppStore = defineStore('app', {
                 this.loading = false;
             }
         },
-        async updateInteractionSummary(days) {
+        updateInteractionSummary(days) {
+            console.log("ENTERING UPDATE INTERACTION SUMMARY");
             this.selectedDateRange = days;
-            if (this.activeTerritoryAccountIds.length > 0) {
-                this.interactionSummary = await getInteractionSummaryStats(this.activeTerritoryAccountIds, [this.user.id], this.selectedDateRange);
-            }
+
+            const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
+            const epAccountIdsSet = new Set(this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.account__v) : []);
+            const targetDate = Moment().subtract(days, 'days').startOf('day');
+
+            console.log("HERE 1");
+            console.log(activeAccountIdsSet);
+            console.log(epAccountIdsSet);
+
+            let totalCalls = 0, totalAttendees = 0, callsWithMedia = 0, mediaUsed = 0;
+            (this.callList || []).forEach(c => {
+                if (c.ownerId === this.user.id && epAccountIdsSet.has(c.accountId) && Moment(c.systemDate).isSameOrAfter(targetDate, 'day')) {
+                    totalCalls++;
+                    totalAttendees += (c.numAttendees || 0);
+                    if (c.isCLM) callsWithMedia++;
+                    if (c.product && c.product !== NO_DATA) mediaUsed += c.product.split(',').length;
+                }
+            });
+
+            console.log("HERE 2");
+            console.log(totalCalls);
+            console.log(totalAttendees);
+            console.log(callsWithMedia);
+            console.log(mediaUsed);
+
+            const avgAttendees = totalCalls > 0 ? Math.round(totalAttendees / totalCalls) : 0;
+
+            let totalEmails = 0, clickedEmails = 0;
+            (this.seList || []).forEach(e => {
+                if (e && e.ownerId === this.user.id && epAccountIdsSet.has(e.accountId) && Moment(e.systemDate).isSameOrAfter(targetDate, 'day')) {
+                    totalEmails++;
+                    if (e.clicked) clickedEmails++;
+                }
+            });
+            const emailClickRate = totalEmails > 0 ? Math.round((clickedEmails / totalEmails) * 100) : 0;
+
+            console.log("HERE 3");
+            console.log(totalEmails);
+            console.log(clickedEmails);
+            console.log(emailClickRate);
+
+
+            let pendingSuggestions = 0;
+            (this.suggestionList || []).forEach(s => {
+                if (s && epAccountIdsSet.has(s.accountId) && Moment(s.postedSystemDate).isSameOrAfter(targetDate, 'day')) {
+                    pendingSuggestions++;
+                }
+            });
+
+            console.log("HERE 4");
+            console.log(pendingSuggestions);
+
+
+            let actionedSuggestions = 0;
+            (this.actionedSuggestions || []).forEach(s => {
+                if (s && epAccountIdsSet.has(s.accountId) && Moment(s.postedSystemDate).isSameOrAfter(targetDate, 'day')) {
+                    actionedSuggestions++;
+                }
+            });
+
+            console.log("HERE 5");
+            console.log(actionedSuggestions);
+
+
+            this.interactionSummary = { totalCalls, avgAttendees, callsWithMedia, mediaUsed, totalEmails, emailClickRate, pendingSuggestions, actionedSuggestions };
+            console.log("EXITING UPDATE INTERACTION SUMMARY");
         },
         setIsOnline(isOnline){
             this.isOnline = (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') 
@@ -400,9 +472,19 @@ export const useAppStore = defineStore('app', {
         async changeTerritory(territoryId, i18n) {
             const selected = this.territories.find(t => t.id === territoryId);
             if(selected && selected.id !== this.territory.id) {
-                this.territory.id = selected.id;
-                this.territory.name = selected.name;
-                await this.loadData(i18n);
+                this.loading = true;
+                try {
+                    this.territory.id = selected.id;
+                    this.territory.name = selected.name;
+                    this.setTerritoryType(this.territory.name);
+                    await this.loadTerritoryData(territoryId, i18n);
+                } catch (ex) {
+                    console.log('Error:: ' + ex);
+                    this.notification = { variant: 'error', message: ex.message };
+                    this.showNotification = true;
+                } finally {
+                    this.loading = false;
+                }
             }
         },
         setTerritoryType(territoryName) {

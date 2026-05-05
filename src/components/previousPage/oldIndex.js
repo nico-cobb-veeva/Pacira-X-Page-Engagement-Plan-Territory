@@ -45,42 +45,26 @@ export const getUserDetail = () => {
     });
 };
 
-export const getUserTerritoryDetail = (userId, isManager) => {
+export const getUserTerritoryDetail = (userId) => {
     let terrIds = [];
     return ds.getUserTerritory(userId)
     .then(territoryResponse => {
-        if (territoryResponse && territoryResponse.length > 0) {
-            terrIds = territoryResponse.map(territory => territory.territory__v);
-            return ds.getTerritory(terrIds, isManager);
-        }
-        return [];
+        terrIds = territoryResponse.map(territory => territory.territory__v);
+        return ds.getTerritory([terrIds[0]]);
     }).then(territoryResp => {
         return territoryResp;
     });
 };
 
 // current account detail
-export const getAccountDetail = (territoryIds) => {
+export const getAccountDetail = () => {
     let acctResp = [];
-    return partitionQuery(ds.getAccountTerritories, territoryIds)
-    .then(atResp => {
-        let acctIds = [];
-        if(atResp && atResp.length > 0) {
-            acctIds = atResp.map(at => at.account__v);
-        }
-        console.log("BEFORE getAccountInfo acctIds");
-        console.log(acctIds);
-        return partitionQuery(ids => ds.getAccountInfo(ids, true), acctIds);
+    return ds.getDataForCurrentObject('account__v', 'id')
+    .then(acctId => {
+        return ds.getAccountInfo([acctId]);
     }).then(aResp => {
-        acctResp = aResp ? [...aResp] : [];
-        let parentIds = [];
-        acctResp.forEach(a => {
-            if(a.primary_parent__v) parentIds.push(a.primary_parent__v);
-        });
-        if (parentIds.length > 0) {
-            return partitionQuery(ids => ds.getAccountInfo(ids, true), Array.from(new Set(parentIds)));
-        }
-        return [];
+        acctResp = [...aResp];
+        return ds.getAccountInfo([aResp[0].primary_parent__v]);
     }).then(parentResp => {
         return { acctList: acctResp, parentAcctList: parentResp };
     });
@@ -89,13 +73,13 @@ export const getAccountDetail = (territoryIds) => {
 
 // get child accounts
 export const getChildAccountInfo = (acctIds) => {
-    return partitionQuery(ds.getChildAccounts, acctIds)
+    return ds.getChildAccounts(acctIds)
     .then(chResp => {
         let childAcctIds = [];
         if(chResp && chResp.length > 0) {
-            childAcctIds = Array.from(new Set(chResp.map(ch => ch.child_account__v)));
+            childAcctIds = chResp.map(ch => ch.child_account__v);
         }
-        return childAcctIds.length > 0 ? partitionQuery(ds.getAccountInfo, childAcctIds) : [];
+        return ds.getAccountInfo(childAcctIds);
     }).then(acctResp => {
         return acctResp;
     });
@@ -288,8 +272,8 @@ const processEventResponse = (events, eventTypeMap, ownerMap, userTypeMap) => {
 }
 
 // get suggestion info
-export const getSuggestionInfo = (acctIds, accountMap, userIds) => {
-    return ds.getSuggestions(acctIds, userIds)
+export const getSuggestionInfo = (accountMap, userIds) => {
+    return ds.getSuggestions(Array.from(accountMap.keys()), userIds)
     .then(suggResp => {
         return processSuggestionResponse(suggResp, accountMap);
     });
@@ -328,9 +312,9 @@ const processSuggestionResponse = (suggestions, accountMap) => {
 };
 
 // get suggestion info
-export const getKeyStakeholderInfo = (acctPlanIds) => {
+export const getKeyStakeholderInfo = (acctPlanId) => {
     let accountMap = new Map(), callMap = new Map(), sentEmailMap = new Map(), addrMap = new Map(), ksList = [], accountIds = [];
-    return ds.getKeyStakeholders(acctPlanIds)
+    return ds.getKeyStakeholders(acctPlanId)
     .then(ksResp => {
         if(ksResp && ksResp.length > 0) {
             ksResp.forEach(ks => {
@@ -389,12 +373,6 @@ export const getKeyStakeholderInfo = (acctPlanIds) => {
 };
 
 const processKeyStakeholderResponse = (keyStakeholders, accountMap, callMap, sentEmailMap, addressMap) => {
-    console.log("entering key stakeholder process");
-    console.log(keyStakeholders);
-    console.log(accountMap);
-    console.log(callMap);
-    console.log(sentEmailMap);
-    console.log(addressMap);
     let retList = [];
     if(keyStakeholders && keyStakeholders.length > 0) {
         keyStakeholders.map(ks => {
@@ -420,88 +398,4 @@ const processKeyStakeholderResponse = (keyStakeholders, accountMap, callMap, sen
         });
     }
     return retList;
-};
-
-// get engagement plan summary
-export const getEngagementPlanSummaryData = (acctIds, pacTeam) => {
-    let rawPlans = [], rawPlanTactics = [], rawAccountTactics = [], rawActionItems = [];
-    return partitionQuery(ids => ds.getAccountPlans(ids, pacTeam), acctIds)
-    .then(plans => {
-        if (plans && plans.length > 0) {
-            rawPlans = plans;
-            return partitionQuery(ds.getPlanTactics, rawPlans.map(p => p.id));
-        }
-        return window.Q.resolve([]);
-    })
-    .then(ptResp => {
-        if (ptResp && ptResp.length > 0) {
-            rawPlanTactics = ptResp;
-            return partitionQuery(ds.getAccountTactics, rawPlanTactics.map(pt => pt.id));
-        }
-        return window.Q.resolve([]);
-    })
-    .then(atResp => {
-        if (atResp && atResp.length > 0) {
-            rawAccountTactics = atResp;
-            return partitionQuery(ds.getActionItems, rawAccountTactics.map(at => at.id));
-        }
-        return window.Q.resolve([]);
-    })
-    .then(aiResp => {
-        if (aiResp && aiResp.length > 0) {
-            rawActionItems = aiResp;
-        }
-        return { rawPlans, rawPlanTactics, rawAccountTactics, rawActionItems };
-    });
-};
-
-// get action items info for dashboard
-export const getDashboardActionItemsInfo = (planIds, actionItemMap) => {
-    let actionItems = [], foundPlanIds = [];
-    let planMap = new Map(), accountMap = new Map();
-
-    return partitionQuery(ds.getDashboardActionItems, planIds)
-    .then(aiResp => {
-        if(aiResp && aiResp.length > 0) {
-            aiResp.forEach(ai => {
-                let isMarkedForDelete = false;
-                if((typeof ai.pac_action_item_marked_for_delete__c === 'number' && ai.pac_action_item_marked_for_delete__c === 1) 
-                    || (typeof ai.pac_action_item_marked_for_delete__c === 'boolean' && ai.pac_action_item_marked_for_delete__c === true)) {
-                    isMarkedForDelete = true;
-                }
-                if(isMarkedForDelete === false) {
-                    actionItems.push(ai);
-                    if(ai.account_plan__v) foundPlanIds.push(ai.account_plan__v);
-                }
-            });
-        }
-        return foundPlanIds.length > 0 ? partitionQuery(ds.getAccountPlansByIds, Array.from(new Set(foundPlanIds))) : window.Q.resolve([]);
-    }).then(planResp => {
-        let acctIds = [];
-        if(planResp && planResp.length > 0) {
-            planResp.forEach(p => {
-                planMap.set(p.id, p.account__v);
-                if(p.account__v) acctIds.push(p.account__v);
-            });
-        }
-        return acctIds.length > 0 ? partitionQuery(ds.getAccountInfo, Array.from(new Set(acctIds))) : window.Q.resolve([]);
-    }).then(acctResp => {
-        if(acctResp && acctResp.length > 0) {
-            acctResp.forEach(a => accountMap.set(a.id, a.name__v));
-        }
-        return actionItems.map(ai => {
-            const acctId = planMap.get(ai.account_plan__v);
-            let itemName = ai.name__v;
-            if(ai.pac_action_item__c && actionItemMap && actionItemMap.has(ai.pac_action_item__c)) {
-                itemName = actionItemMap.get(ai.pac_action_item__c);
-            }
-            return {
-                id: ai.id,
-                name: itemName,
-                accountId: acctId,
-                accountName: (acctId && accountMap.has(acctId)) ? accountMap.get(acctId) : NO_DATA,
-                dueDate: (ai.due_date__v) ? Moment(ai.due_date__v).format(DISPLAY_DATE_FORMAT) : NO_DATA
-            };
-        });
-    });
 };
