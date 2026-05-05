@@ -1,14 +1,19 @@
 <template>
     <tr>
-        <td class="text-wrap" style="width: 40%;"><a href="#" class="text-decoration-none text-primary" @click.prevent="openActionItem">{{ actionItemName }}</a></td>
+        <td class="text-wrap" style="width: 40%;">{{ actionItemName }}</td>
         <td><a href="#" class="text-decoration-none text-primary" @click.prevent="openAccount">{{ accountName }}</a></td>
         <td>{{ dueDate }}</td>
+        <td class="text-center">
+            <font-awesome-icon :icon="faEdit" style="color: rgb(108, 117, 125); cursor: pointer;" @click.prevent="$emit('edit')" />
+        </td>
     </tr>
 </template>
 
 <script setup>
-    import { defineProps } from 'vue';
+    import { defineProps, defineEmits } from 'vue';
     import { viewRecord } from '@/lib/myInsights/query';
+    import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+    import { faEdit } from '@fortawesome/free-solid-svg-icons';
     
     const props = defineProps({
         actionItemId: String,
@@ -18,11 +23,7 @@
         dueDate: String
     });
 
-    const openActionItem = () => {
-        if (props.actionItemId) {
-            viewRecord('action_item__v', props.actionItemId);
-        }
-    };
+    defineEmits(['edit']);
 
     const openAccount = () => {
         if (props.accountId) {

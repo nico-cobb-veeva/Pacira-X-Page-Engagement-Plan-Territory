@@ -159,6 +159,11 @@ export const useAppStore = defineStore('app', {
                 console.log("CHECK IS MANAGER", isManager);
                 console.log("app profile", this.user.appProfile);
                 const userTerritories = await getUserTerritoryDetail([this.user.id], isManager);
+                
+                if (isManager && userTerritories && userTerritories.length > 0) {
+                    userTerritories.shift();
+                }
+                
                 this.setTerritories(userTerritories);
                 if(!this.territory.id && this.territories.length > 0) {
                     this.territory.id = this.territories[0].id;
