@@ -1,7 +1,7 @@
 <template>
     <div class="card h-100 shadow-sm border-0">
         <div class="card-header bg-white border-bottom-0 pb-0 fw-bold">
-            Engagement Plan Progress
+            {{ $t('EPD_ENGAGEMENT_PLAN_PROGRESS') }}
         </div>
         <div class="card-body d-flex flex-column align-items-center justify-content-center text-muted">
             <!-- SVG Radial Progress Chart -->
@@ -18,10 +18,10 @@
                 <div class="position-absolute fs-4 fw-bold text-dark">{{ progressStats.pct }}%</div>
             </div>
             <div class="w-100 px-3 text-start">
-                <div class="mb-2"><i class="bi bi-bullseye me-2"></i>Total Action Items <span class="float-end fw-bold text-dark">{{ progressStats.total }}</span></div>
-                <div class="mb-2"><i class="bi bi-check-circle me-2 text-success"></i>Completed <span class="float-end fw-bold text-dark">{{ progressStats.completed }}</span></div>
-                <div class="mb-2"><i class="bi bi-clock-history me-2 text-warning"></i>In Progress <span class="float-end fw-bold text-dark">{{ progressStats.inProgress }}</span></div>
-                <div><i class="bi bi-star me-2 text-secondary"></i>Not Started <span class="float-end fw-bold text-dark">{{ progressStats.notStarted }}</span></div>
+                <div class="mb-2"><i class="bi bi-bullseye me-2"></i>{{ $t('EPD_TOTAL_ACTION_ITEMS') }} <span class="float-end fw-bold text-dark">{{ progressStats.total }}</span></div>
+                <div class="mb-2"><i class="bi bi-check-circle me-2 text-success"></i>{{ $t('EPD_COMPLETED') }} <span class="float-end fw-bold text-dark">{{ progressStats.completed }}</span></div>
+                <div class="mb-2"><i class="bi bi-clock-history me-2 text-warning"></i>{{ $t('EPD_IN_PROGRESS') }} <span class="float-end fw-bold text-dark">{{ progressStats.inProgress }}</span></div>
+                <div><i class="bi bi-star me-2 text-secondary"></i>{{ $t('EPD_NOT_STARTED') }} <span class="float-end fw-bold text-dark">{{ progressStats.notStarted }}</span></div>
             </div>
         </div>
     </div>
@@ -35,30 +35,55 @@
     import { storeToRefs } from 'pinia';
 
     const store = useAppStore();
-    const { actionItemList, rawPlans, rawPlanTactics, rawAccountTactics, activeTerritoryAccountIds } = storeToRefs(store);
+    const { actionItemList, rawPlans, rawPlanTactics, rawAccountTactics, activeTerritoryAccountIds, selectedPlanTactic } = storeToRefs(store);
 
+    console.log("SELECTED PALN ATCTCI", selectedPlanTactic.value.planTacticName)
     const validAccountTacticIds = computed(() => {
-        const acctIds = new Set(activeTerritoryAccountIds.value || []);
+        const activeAccountIdsSet = new Set(activeTerritoryAccountIds.value || []);
         
         const validPlanIds = new Set(
             (rawPlans.value || [])
-            .filter(p => acctIds.has(p.account__v))
+            .filter(p => activeAccountIdsSet.has(p.account__v))
             .map(p => p.id)
         );
 
-        const validPtIds = new Set(
-            (rawPlanTactics.value || [])
-            .filter(pt => validPlanIds.has(pt.account_plan__v))
-            .map(pt => pt.id)
-        );
+        let filtered = false;
+        if (selectedPlanTactic.value.planTacticName !== 'all') {
+            filtered = true;
+        }
 
-        const validAtIds = new Set(
-            (rawAccountTactics.value || [])
-            .filter(at => validPtIds.has(at.plan_tactic__v))
-            .map(at => at.id)
-        );
+        if (filtered) {
+            console.log("SELECTED PALN ATCTCI", selectedPlanTactic.value.planTacticName);
+            const validPtIds = new Set(
+                (rawPlanTactics.value || [])
+                .filter(pt => validPlanIds.has(pt.account_plan__v) && pt.name__v === selectedPlanTactic.value.planTacticName)
+                .map(pt => pt.id)
+            );
 
-        return validAtIds;
+            const validAtIds = new Set(
+                (rawAccountTactics.value || [])
+                .filter(at => validPtIds.has(at.plan_tactic__v))
+                .map(at => at.id)
+            );
+
+            return validAtIds;
+        }
+        else {
+            const validPtIds = new Set(
+                (rawPlanTactics.value || [])
+                .filter(pt => validPlanIds.has(pt.account_plan__v))
+                .map(pt => pt.id)
+            );
+
+            const validAtIds = new Set(
+                (rawAccountTactics.value || [])
+                .filter(at => validPtIds.has(at.plan_tactic__v))
+                .map(at => at.id)
+            );
+
+            return validAtIds;
+        }
+
     });
 
     const progressStats = computed(() => {
@@ -76,3 +101,9 @@
         return { total, completed, inProgress, notStarted, pct };
     });
 </script>
+
+<style scoped>
+.circle {
+    transition: stroke-dasharray 0.6s ease;
+}
+</style>

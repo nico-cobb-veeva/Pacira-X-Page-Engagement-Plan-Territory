@@ -1547,7 +1547,171 @@ export const queryRecord = {
             {
                 name__v: 'AM_DO_NOT_CALL',
                 text__v: 'HCO Restricted Visibility'
-            }
+                },
+                {
+                    name__v: "EPD_ENGAGEMENT_PLAN_PROGRESS",
+                    text__v: "Engagement Plan Progress"
+                },
+                {
+                    name__v: "EPD_TOTAL_ACTION_ITEMS",
+                    text__v: "Total Action Items"
+                },
+                {
+                    name__v: "EPD_COMPLETED",
+                    text__v: "Completed"
+                },
+                {
+                    name__v: "EPD_IN_PROGRESS",
+                    text__v: "In Progress"
+                },
+                {
+                    name__v: "EPD_NOT_STARTED",
+                    text__v: "Not Started"
+                },
+                {
+                    name__v: "EPD_ACTION_ITEMS",
+                    text__v: "Action Items"
+                },
+                {
+                    name__v: "EPD_DUE_IN_30_DAYS",
+                    text__v: "Due in 30 days"
+                },
+                {
+                    name__v: "EPD_COL_ACTION_ITEM",
+                    text__v: "ACTION ITEM"
+                },
+                {
+                    name__v: "EPD_COL_ACCOUNT",
+                    text__v: "ACCOUNT"
+                },
+                {
+                    name__v: "EPD_COL_DUE_DATE",
+                    text__v: "DUE DATE"
+                },
+                {
+                    name__v: "EPD_NO_ACTION_ITEMS_DUE_SOON",
+                    text__v: "No action items due soon"
+                },
+                {
+                    name__v: "EPD_ENGAGEMENT_PLANS",
+                    text__v: "Engagement Plans"
+                },
+                {
+                    name__v: "EPD_ALL_LEVELS",
+                    text__v: "All Levels"
+                },
+                {
+                    name__v: "EPD_SEARCH",
+                    text__v: "Search..."
+                },
+                {
+                    name__v: "EPD_COL_ENGAGEMENT_PLAN",
+                    text__v: "ENGAGEMENT PLAN"
+                },
+                {
+                    name__v: "EPD_COL_NUM_OBJECTIVES",
+                    text__v: "# OBJECTIVES"
+                },
+                {
+                    name__v: "EPD_COL_NUM_ACTION_ITEMS",
+                    text__v: "# ACTION ITEMS"
+                },
+                {
+                    name__v: "EPD_COL_PROGRESS",
+                    text__v: "PROGRESS"
+                },
+                {
+                    name__v: "EPD_COL_NO_ACTIVITIES",
+                    text__v: "NO ACTIVITIES"
+                },
+                {
+                    name__v: "EPD_LAST_30_DAYS",
+                    text__v: "last 30 days"
+                },
+                {
+                    name__v: "EPD_COL_ACHIEVEMENTS",
+                    text__v: "ACHIEVEMENTS"
+                },
+                {
+                    name__v: "EPD_COMPLETED_IN_15_DAYS",
+                    text__v: "completed in 15 days"
+                },
+                {
+                    name__v: "EPD_COL_LKA_PROFILE",
+                    text__v: "LKA PROFILE"
+                },
+                {
+                    name__v: "EPD_IF_AVAILABLE",
+                    text__v: "if available"
+                },
+                {
+                    name__v: "EPD_LOADING_ENGAGEMENT_PLANS",
+                    text__v: "Loading engagement plans..."
+                },
+                {
+                    name__v: "EPD_NO_ENGAGEMENT_PLANS_FOUND",
+                    text__v: "No engagement plans found"
+                },
+                {
+                    name__v: "EPD_INTERACTION_SUMMARY",
+                    text__v: "Interaction Summary"
+                },
+                {
+                    name__v: "EPD_30_DAYS",
+                    text__v: "30 Days"
+                },
+                {
+                    name__v: "EPD_60_DAYS",
+                    text__v: "60 Days"
+                },
+                {
+                    name__v: "EPD_90_DAYS",
+                    text__v: "90 Days"
+                },
+                {
+                    name__v: "EPD_TOTAL_ACCOUNT_CALLS",
+                    text__v: "Total Account Calls"
+                },
+                {
+                    name__v: "EPD_AVG_ATTENDEES_PER_CALL",
+                    text__v: "Avg. Attendees per call: "
+                },
+                {
+                    name__v: "EPD_TOTAL_CALLS_W_MEDIA",
+                    text__v: "Total Calls w/ Media"
+                },
+                {
+                    name__v: "EPD_MEDIA_USED",
+                    text__v: "# Media used: "
+                },
+                {
+                    name__v: "EPD_TOTAL_SENT_EMAILS",
+                    text__v: "Total Sent Emails"
+                },
+                {
+                    name__v: "EPD_EMAIL_CLICKED_RATE",
+                    text__v: "Email Clicked Rate: "
+                },
+                {
+                    name__v: "EPD_PENDING_SUGGESTIONS",
+                    text__v: "Pending Suggestions"
+                },
+                {
+                    name__v: "EPD_TOTAL_ACTIONED",
+                    text__v: "Total Actioned: "
+                },
+                {
+                    name__v: "EPD_TERRITORY",
+                    text__v: "Territory"
+                },
+                {
+                    name__v: "EPD_REFRESH",
+                    text__v: "Refresh"
+                },
+                {
+                    name__v: "EPD_SELECT_DATE",
+                    text__v: "Select date"
+                }
         ],
         success: true,
         record_count: 10,

@@ -2,12 +2,17 @@
     <div class="container-fluid py-3 px-3 bg-light" style="min-height: 100vh;">
         
         <!-- Top controls -->
-        <div class="row mb-3" v-if="isManager">
+        <div class="row mb-3">
             <div class="col d-flex justify-content-end align-items-center">
-                <span class="me-2 fw-bold text-secondary">Territory</span>
-                <select class="form-select form-select-sm" style="width: auto;" v-model="selectedTerritoryId" @change="handleTerritoryChange">
-                    <option v-for="terr in territories" :key="terr.id" :value="terr.id">{{ terr.name }}</option>
-                </select>
+                <template v-if="isManager">
+                    <span class="me-2 fw-bold text-secondary">{{ $t('EPD_TERRITORY') }}</span>
+                    <select class="form-select form-select-sm me-3" style="width: auto;" v-model="selectedTerritoryId" @change="handleTerritoryChange">
+                        <option v-for="terr in territories" :key="terr.id" :value="terr.id">{{ terr.name }}</option>
+                    </select>
+                </template>
+                <button class="btn btn-sm btn-outline-primary" @click.prevent="handleRefresh">
+                    <i class="bi bi-arrow-clockwise me-1"></i> {{ $t('EPD_REFRESH') }}
+                </button>
             </div>
         </div>
 
@@ -61,6 +66,20 @@
 
     const handleTerritoryChange = () => {
         store.changeTerritory(selectedTerritoryId.value, t);
+    };
+
+    const handleRefresh = async () => {
+        if (!territory.value.id) return;
+        
+        store.loading = true;
+        try {
+            await store.loadTerritoryData(territory.value.id, t);
+        } catch (ex) {
+            console.log('Error:: ' + ex);
+            store.setNotification({ show: true, variant: 'error', message: ex.message });
+        } finally {
+            store.loading = false;
+        }
     };
 </script>
 

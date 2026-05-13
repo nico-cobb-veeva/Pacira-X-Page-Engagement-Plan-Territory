@@ -256,7 +256,7 @@ export const getSentEmails = (acctIds, daysAgo = 90) => {
     const deferred = $q.defer();
     const queryConfig = {
         object: 'sent_email__v',
-        fields: ['id', 'account__v', 'subject__v', 'email_sent_date__v', 'ownerid__v', 'clicked__v', 'last_click_date__v', 'product_display__v'],
+        fields: ['id', 'account__v', 'subject__v', 'email_sent_date__v', 'clicked__v', 'last_click_date__v', 'product_display__v'],
         where: `account__v IN ${Utils.getInStatementArray(acctIds)}
                AND sent_email_status__v IN  ${Utils.getInStatementArray(['sent__v', 'delivered__v'])}
                AND email_sent_date__v >= '${targetDate}'`,
@@ -316,28 +316,90 @@ export const getMedicalEvents = (eventIds) => {
     return deferred.promise;
 };
 
-// get suggestions
-export const getSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
-    console.log("NOW CALLING getSuggestions");
-    console.log(acctIds);
-    console.log(ownerIds);
-    const today = Moment().format(SYSTEM_DATE_FORMAT);
+/*
+export const getSubmittedCalls = (acctIds, daysAgo = 90) => {
     const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     const deferred = $q.defer();
     const queryConfig = {
+        object: 'call2__v',
+        fields: ['id', 'account__v', 'clm__v', 'call_date__v', 'ownerid__v', 'detailed_products__v', 'activity_type__c'],
+        where: `account__v IN ${Utils.getInStatementArray(acctIds)}
+               AND call2_status__v IN  ${Utils.getInStatementArray(['submitted__v'])}
+               AND call_date__v >= '${targetDate}'`,
+        sort: ['call_datetime__v DESC']
+    };
+    ds.queryRecord(queryConfig).then(result => {
+        console.log('getSubmittedCalls()', result[queryConfig.object]);
+        let data = result[queryConfig.object] || [];
+        data = data.filter(item => Moment(item.call_date__v).isSameOrAfter(targetDate, 'day'));
+        deferred.resolve(data);
+    }, err => {
+        console.log(err);
+        deferred.resolve(null);
+    });
+    return deferred.promise;
+};
+
+
+
+        where = `dismissed__v = 0
+                AND marked_as_complete__v = 0
+                AND actioned__v = 0
+                AND no_homepage__v = 0
+                AND expiration_date__v >= ${today}
+                AND posted_date__v >= ${targetDate}`
+
+
+                LOOKING FOR SUGGESTIONS FROM ACCOUNT:
+                V4TZZ0000JHCYP7
+*/
+
+
+// get suggestions
+export const getSuggestions = (daysAgo = 90) => {
+    console.log("NOW CALLING getSuggestions");
+    const today = Moment().format(SYSTEM_DATE_FORMAT);
+    const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
+    // const deferred = $q.defer();
+
+    let where = '';
+    if(Utils.isOnline()){
+        where = `(dismissed__v = null OR dismissed__v = 0)
+                AND (marked_as_complete__v = null OR marked_as_complete__v = 0)
+                AND (actioned__v = null OR actioned__v = 0)
+                AND (no_homepage__v = null OR no_homepage__v = false)
+                AND expiration_date__v >= '${today}'
+                AND posted_date__v >= '${targetDate}'`
+    } else {
+        where = `(dismissed__v = null OR dismissed__v = 0)
+                AND (marked_as_complete__v = null OR marked_as_complete__v = 0)
+                AND (actioned__v = null OR actioned__v = 0)
+                AND (no_homepage__v = null OR no_homepage__v = false)
+                AND expiration_date__v >= '${today}'
+                AND posted_date__v >= '${targetDate}'`
+    }
+    const deferred = $q.defer();
+    /*
+                fields: [
+                'id', 
+                'account__v', 
+                'display_dismiss__v',
+                'display_mark_as_complete__v',
+                'posted_date__v',
+                'priority__v',
+                'reason__v',
+                'record_type_name__v',
+                'title__v',
+                'expiration_date__v',
+            ],
+            */
+    const queryConfig = {
         object: 'suggestion__v',
-        fields: ['id', 'account__v', 'display_dismiss__v', 'display_mark_as_complete__v', 'posted_date__v', 
-                    'priority__v', 'reason__v', 'record_type_name__v', 'title__v', 'expiration_date__v'],
-        where: 'ownerid__v IN ' + Utils.getInStatementArray(ownerIds) +
-                ' AND account__v IN ' + Utils.getInStatementArray(acctIds) +
-                ' AND dismissed__v = false' +
-                ' AND marked_as_complete__v = false' +
-                ' AND actioned__v = false' +
-                ' AND no_homepage__v = false' +
-                ' AND expiration_date__v >= ' + today +
-                ' AND posted_date__v >= ' + targetDate,
+        fields: ['id', 'account__v', 'posted_date__v', 'expiration_date__v', 'record_type_name__v', 'title__v', 'reason__v', 'display_dismiss__v', 'display_mark_as_complete__v', 'priority__v'],
+        where: where,
         sort: ['posted_date__v DESC']
     };
+    console.log(where);
     ds.queryRecord(queryConfig).then(result => {
         console.log('getSuggestions()', result[queryConfig.object]);
         let data = result[queryConfig.object] || [];
@@ -345,6 +407,7 @@ export const getSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
         deferred.resolve(data);
     }, err => {
         console.log(err);
+        console.log("GET SUGGESTIONS ERROR HERE");
         deferred.resolve(null);
     });
     return deferred.promise;
@@ -356,14 +419,25 @@ export const getActionedSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
     console.log(acctIds);
     console.log(ownerIds);
     const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
+
+    let where = '';
+    if(Utils.isOnline()){
+        where = `account__v IN ${Utils.getInStatementArray(acctIds)}
+                AND actioned__v = true
+                AND posted_date__v >= ${targetDate}`
+    } else {
+        where = `ownerid__v IN ${Utils.getInStatementArray(ownerIds)}
+            AND account__v IN ${Utils.getInStatementArray(acctIds)}
+            AND actioned__v = 1
+            AND posted_date__v >= ${targetDate}`   
+    }
+
     const deferred = $q.defer();
     const queryConfig = {
         object: 'suggestion__v',
-        fields: ['id', 'account__v', 'posted_date__v'],
-        where: 'ownerid__v IN ' + Utils.getInStatementArray(ownerIds) +
-                ' AND account__v IN ' + Utils.getInStatementArray(acctIds) +
-                ' AND actioned__v = true' +
-                ' AND posted_date__v >= ' + targetDate,
+        fields: ['id', 'account__v', 'posted_date__v', 'expiration_date__v', 'record_type_name__v', 'title__v', 'reason__v', 'display_dismiss__v', 'display_mark_as_complete__v', 'priority__v'],
+        where: where,
+        sort: ['posted_date__v DESC']
     };
 
     ds.queryRecord(queryConfig).then(result => {
@@ -559,7 +633,7 @@ export const getVeevaMessage = (language) => {
     const queryConfig = {
         object: 'message__v',
         fields: ['name__v', 'text__v'],
-        where: 'category__v = \'Account_Management\''
+        where: 'category__v IN (\'Account_Management\', \'Engagement_Plan_Dashboard\')'
     };
     ds.queryRecord(queryConfig).then(result => {
         deferred.resolve(Utils.arrayToObject(result.message__v, 'name__v', 'text__v'));

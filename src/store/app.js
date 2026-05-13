@@ -59,6 +59,7 @@ export const useAppStore = defineStore('app', {
         doNotCallMap: new Map(),
         eventTypeMap: new Map(),
         selectedDateRange: 90,
+        selectedPlanTactic: {planTacticName: 'all'},
         trackEvent: false
     }),
     getters: {
@@ -69,6 +70,10 @@ export const useAppStore = defineStore('app', {
         currUser: (state) => state.user,
         currAccount: (state) => state.account,
         currTerritory: (state) => state.territory,
+        accountPlan: (state) => state.acctPlan,
+        planTactics: (state) => state.planTacticList,
+        accountTacticOptionMap: (state) => state.accountTacticMap,
+        actionItemOptionMap: (state) => state.actionItemMap,
         isManager: (state) => MANAGER_PROFILES.includes(state.user.appProfile)
     },
     actions: {
@@ -87,7 +92,7 @@ export const useAppStore = defineStore('app', {
                 this.statusMap = new Map();
                 this.progressMap = new Map();
                 this.roleMap = new Map();
-                this.priorityMap = new Map();
+                // this.priorityMap = new Map();
                 this.specialtyMap = new Map();
 
                 // get picklist values
@@ -103,35 +108,35 @@ export const useAppStore = defineStore('app', {
                     this.hcoTypeMap = new Map(picklistResp);
                 }
 
-                // product priority
-                picklistResp = await getPicklistValueLabels('account__v', 'pac_exparel_priority__c');
-                if(picklistResp) {
-                    this.priorityMap = new Map(picklistResp);
-                }
+                // // product priority
+                // picklistResp = await getPicklistValueLabels('account__v', 'pac_exparel_priority__c');
+                // if(picklistResp) {
+                //     this.priorityMap = new Map(picklistResp);
+                // }
 
-                // account specialty
-                picklistResp = await getPicklistValueLabels('account__v', 'specialty_1__v');
-                if(picklistResp) {
-                    this.specialtyMap = new Map(picklistResp);
-                }
+                // // account specialty
+                // picklistResp = await getPicklistValueLabels('account__v', 'specialty_1__v');
+                // if(picklistResp) {
+                //     this.specialtyMap = new Map(picklistResp);
+                // }
 
-                // call activity type
-                picklistResp = await getPicklistValueLabels('call2__v', 'activity_type__c');
-                if(picklistResp) {
-                    this.activityTypeMap = new Map(picklistResp);
-                }
+                // // call activity type
+                // picklistResp = await getPicklistValueLabels('call2__v', 'activity_type__c');
+                // if(picklistResp) {
+                //     this.activityTypeMap = new Map(picklistResp);
+                // }
 
-                // do not call banner
-                picklistResp = await getPicklistValueLabels('account__v', 'pacira_do_not_call_banner__c');
-                if(picklistResp) {
-                    this.doNotCallMap = new Map(picklistResp);
-                }
+                // // do not call banner
+                // picklistResp = await getPicklistValueLabels('account__v', 'pacira_do_not_call_banner__c');
+                // if(picklistResp) {
+                //     this.doNotCallMap = new Map(picklistResp);
+                // }
 
-                // event type
-                picklistResp = await getPicklistValueLabels('medical_event__v', 'event_type__v');
-                if(picklistResp) {
-                    this.eventTypeMap = new Map(picklistResp);
-                }
+                // // event type
+                // picklistResp = await getPicklistValueLabels('medical_event__v', 'event_type__v');
+                // if(picklistResp) {
+                //     this.eventTypeMap = new Map(picklistResp);
+                // }
 
                 // account tactic/action item status picklist
                 picklistResp = await getPicklistValueLabels('account_tactic__v', 'account_tactic_status__v');
@@ -144,14 +149,15 @@ export const useAppStore = defineStore('app', {
                     this.progressMap = new Map(picklistResp);
                 }
 
-                // key stakeholder role picklist
-                picklistResp = await getPicklistValueLabels('key_stakeholder__v', 'role__v');
-                if(picklistResp) {
-                    this.roleMap = new Map(picklistResp);
-                }
+                // // key stakeholder role picklist
+                // picklistResp = await getPicklistValueLabels('key_stakeholder__v', 'role__v');
+                // if(picklistResp) {
+                //     this.roleMap = new Map(picklistResp);
+                // }
 
                 // set user
                 this.setUser(await getUserDetail(), this.userTypeMap);
+                this.setSelectedPlanTactic({ planTacticName: 'all' });
                 
                 //pass the userID here to query the user_territory
                 // set territories
@@ -173,202 +179,10 @@ export const useAppStore = defineStore('app', {
                 //set territory type
                 this.setTerritoryType(this.territory.name);
 
-                // set all account info
-                const territoryIds = this.territories.map(t => t.id);
-                console.log("BEFORE getAccountDetail");
-                console.log(territoryIds);
-                const acctRespObj = await getAccountDetail(territoryIds);
-                console.log("AFTER getAccountDetail");
-                console.log(acctRespObj);
-                let allAcctIds = [];
-                let acctList = [];
-                let parentAcctList = [];
-
-                if(acctRespObj && acctRespObj.acctList) {
-                    acctList = acctRespObj.acctList;
-                    parentAcctList = acctRespObj.parentAcctList || [];
+                if (this.territory.id) {
+                    await this.loadTerritoryData(this.territory.id, i18n);
                 }
 
-                if(acctList.length > 0) {
-                    allAcctIds = acctList.map(a => a.id);
-                    const addressResp = await partitionQuery(getAddress, allAcctIds);
-                    this.setAccount(acctList, parentAcctList, addressResp, this.hcoTypeMap, this.priorityMap, this.doNotCallMap);
-                    acctList.forEach(acct => {
-                        this.allAccountMap.set(acct.id, { id: acct.id, name: acct.name__v, isPerson: (acct.ispersonaccount__v === 1 || acct.ispersonaccount__v === true) });
-                    });
-                }
-
-                // get calls for current hcos
-                this.callList = await partitionQuery(ids => getCallInfo(ids, this.activityTypeMap, this.userTypeMap), allAcctIds);
-
-                // get suggestions, sent email for childs hcps of current hcos
-                const childHcpResp = await getChildAccountInfo(allAcctIds);
-                if(childHcpResp && childHcpResp.length > 0) {
-                    childHcpResp.forEach(ch => {
-                        this.childHcpList.push({
-                            id: ch.id,
-                            name: ch.name__v,
-                            label: ch.name__v,
-                            value: ch.id
-                        });
-
-                        if(!this.childHcpMap.has(ch.id)) {
-                            this.childHcpMap.set(ch.id, ch.name__v);
-                            this.allAccountMap.set(ch.id, 
-                                { name: ch.name__v, isPerson: (ch.ispersonaccount__v === 1 || ch.ispersonaccount__v === true) ? true : false });
-                        }
-                    });
-
-                    // get sent emails
-                    const allEmailAcctIds = Array.from(new Set([...allAcctIds, ...Array.from(this.childHcpMap.keys())]));
-                    this.seList = await partitionQuery(ids => getSentEmailInfo(ids, this.userTypeMap), allEmailAcctIds);
-
-                    // get events
-                    this.medEvtList = await partitionQuery(ids => getEventInfo(ids, this.eventTypeMap, this.userTypeMap), Array.from(this.childHcpMap.keys()));
-                }
-
-                // get suggestions
-                this.setSuggestions(await partitionQuery(ids => getSuggestionInfo(ids, this.allAccountMap, [this.user.id]), Array.from(this.allAccountMap.keys())));
-
-                // get account plan and associated data
-                // account tactic/action item status picklist
-                picklistResp = await getPicklistValueLabels('account_tactic__v', 'account_tactic_status__v');
-                if(picklistResp) {
-                    this.statusMap = new Map(picklistResp);
-                }
-                // account tactic objective picklist
-                picklistResp = await getPicklistValueLabels('account_tactic__v', 'pac_objective__c');
-                if(picklistResp) {
-                    let selectedObjectives = "";
-                    if (this.territoryType.type === TEAM_EXPAREL) {
-                        selectedObjectives = i18n('AM_EXPAREL_OBJECTIVES');
-                    } else if (this.territoryType.type === TEAM_ZILRETTA) {
-                        selectedObjectives = i18n('AM_ZILRETTA_OBJECTIVES');
-                    } else if (this.territoryType.type === TEAM_OMFS) {
-                        selectedObjectives = i18n('AM_OMFS_OBJECTIVES');
-                    } else if (this.territoryType.type === TEAM_IOVERA) {
-                        selectedObjectives = i18n('AM_IOVERA_OBJECTIVES');
-                    }
-
-                    const splitObjectives = selectedObjectives.split(';');
-                    const objectiveSet = new Set(splitObjectives);
-                    picklistResp.forEach(item => {
-                        if (objectiveSet.has(item[0])) {
-                            this.accountTacticMap.set(item[0], item[1]);
-                        }
-                    });
-                }
-                // action item picklist
-                picklistResp = await getPicklistValueLabels('action_item__v', 'pac_action_item__c');
-                if(picklistResp) {
-                    let selectedActionItems = "";
-                    if (this.territoryType.type === TEAM_EXPAREL) {
-                        selectedActionItems = i18n('AM_EXPAREL_ACTION_ITEMS');
-                    } else if (this.territoryType.type === TEAM_ZILRETTA) {
-                        selectedActionItems = i18n('AM_ZILRETTA_ACTION_ITEMS');
-                    } else if (this.territoryType.type === TEAM_OMFS) {
-                        selectedActionItems = i18n('AM_OMFS_ACTION_ITEMS');
-                    } else if (this.territoryType.type === TEAM_IOVERA) {
-                        selectedActionItems = i18n('AM_IOVERA_ACTION_ITEMS');
-                    }
-
-                    const splitActionItems = selectedActionItems.split(';');
-                    const actionItemsSet = new Set(splitActionItems);
-                    picklistResp.forEach(item => {
-                        if (actionItemsSet.has(item[0])) {
-                            this.actionItemMap.set(item[0], item[1]);
-                        }
-                    });
-                }
-
-                picklistResp = await getPicklistValueLabels('action_item__v', 'pac_progress__c');
-                if(picklistResp) {
-                    this.progressMap = new Map(picklistResp);
-                }
-
-                // key stakeholder role picklist
-                picklistResp = await getPicklistValueLabels('key_stakeholder__v', 'role__v');
-                if(picklistResp) {
-                    this.roleMap = new Map(picklistResp);
-                }
-
-                let pacTeam = '';
-                if (this.territoryType.type === TEAM_EXPAREL) {
-                    pacTeam = 'exparel_core__c';
-                } else if (this.territoryType.type === TEAM_ZILRETTA) {
-                    pacTeam = 'zilretta__c';
-                } else if (this.territoryType.type === TEAM_OMFS) {
-                    pacTeam = 'omfs__c';
-                } else if (this.territoryType.type === TEAM_IOVERA) {
-                    pacTeam = 'iovera__c';
-                }
-
-                const epData = await getEngagementPlanSummaryData(allAcctIds, pacTeam);
-                console.log("EP DATA");
-                console.log(epData);
-                if(epData && epData.rawPlans && epData.rawPlans.length > 0) {
-                    this.rawPlans = epData.rawPlans;
-                    this.rawPlanTactics = epData.rawPlanTactics;
-                    this.rawAccountTactics = epData.rawAccountTactics;
-                    this.rawActionItems = epData.rawActionItems;
-
-                    epData.rawPlans.forEach(plan => {
-                        if (!this.acctPlan.id) {
-                            this.acctPlan.id = plan.id;
-                            this.acctPlan.name = plan.name__v;
-                        }
-                    });
-
-                    if(epData.rawPlanTactics.length > 0) {
-                        let planTacticSet = new Set();
-                        let ptMap = new Map();
-                        epData.rawPlanTactics.forEach(item => {
-                            ptMap.set(item.id, item.name__v);
-                            if (!planTacticSet.has(item.name__v)) {
-                                planTacticSet.add(item.name__v);
-                                // set plan tactics
-                                this.planTacticList.push({
-                                    id: item.name__v,
-                                    name: item.name__v
-                                });
-                            }
-                        });
-
-                        if(epData.rawAccountTactics.length > 0) {
-                            this.setAccountTactics(epData.rawAccountTactics, ptMap);
-                            this.setActionItems(epData.rawActionItems, ptMap);
-                        }
-                    }
-                }
-
-                // Get Active Territory Accounts for Progress Widgets
-                const activeTerritoryResp = await partitionQuery(getAccountTerritories, [this.territory.id]);
-                this.activeTerritoryAccountIds = activeTerritoryResp ? activeTerritoryResp.map(at => at.account__v) : [];
-
-                const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
-                const epAccountIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.account__v) : [];
-                console.log("Account IDS and rawPlans");
-                console.log(epAccountIds);
-                console.log(this.rawPlans);
-
-                // Get Actioned Suggestions for KPI
-                this.actionedSuggestions = await partitionQuery(ids => getActionedSuggestions(ids, [this.user.id], 90), epAccountIds);
-                this.updateInteractionSummary(this.selectedDateRange);
-
-                // Get Dashboard Action Items
-                console.log("BEFORE GET ACTION ITEMS:", this.actionItemMap);
-                const planIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.id) : [];
-                if (planIds.length > 0) {
-                    this.dashboardActionItems = await getDashboardActionItemsInfo(planIds, this.actionItemMap);
-                } else {
-                    this.dashboardActionItems = [];
-                }
-                console.log("AFTER GET ACTION ITEMS:", this.dashboardActionItems);
-
-                //
-
-                /** TRACK EVENT */
-                this.trackEvent = true;
             } catch (ex) {
                 console.log('Error:: ' + ex);
                 this.notification = {
@@ -378,6 +192,243 @@ export const useAppStore = defineStore('app', {
                 this.showNotification = true;
             } finally {
                 this.loading = false;
+            }
+        },
+        async loadTerritoryData(territoryId, i18n) {
+            // Reset territory-dependent state
+            this.callList = [];
+            this.seList = [];
+            // this.medEvtList = [];
+            this.suggestionList = [];
+            this.planTacticList = [];
+            this.acctTacticList = [];
+            this.actionItemList = [];
+            this.dashboardActionItems = [];
+            this.rawPlans = [];
+            this.rawPlanTactics = [];
+            this.rawAccountTactics = [];
+            this.rawActionItems = [];
+            this.actionedSuggestions = [];
+            // this.stakeholders = [];
+            this.childHcpList = [];
+            this.activeTerritoryAccountIds = [];
+            this.allAccountMap = new Map();
+            this.childHcpMap = new Map();
+            this.accountTacticMap = new Map();
+            this.actionItemMap = new Map();
+            this.setSelectedPlanTactic({ planTacticName: 'all' });
+            this.interactionSummary = { totalCalls: 0, avgAttendees: 0, callsWithMedia: 0, mediaUsed: 0, totalEmails: 0, emailClickRate: 0, pendingSuggestions: 0, actionedSuggestions: 0 };
+            this.acctPlan = { id: '', name: '' };
+
+            // set all account info specifically scoped to context territory
+            console.log("BEFORE getAccountDetail", [territoryId]);
+            const acctRespObj = await getAccountDetail([territoryId]);
+            console.log("AFTER getAccountDetail", acctRespObj);
+            let allAcctIds = [];
+            let acctList = [];
+            let parentAcctList = [];
+
+            if(acctRespObj && acctRespObj.acctList) {
+                acctList = acctRespObj.acctList;
+                parentAcctList = acctRespObj.parentAcctList || [];
+            }
+
+            if(acctList.length > 0) {
+                allAcctIds = acctList.map(a => a.id);
+                // const addressResp = await partitionQuery(getAddress, allAcctIds);
+                this.setAccount(acctList, parentAcctList,this.hcoTypeMap, this.doNotCallMap);
+                acctList.forEach(acct => {
+                    this.allAccountMap.set(acct.id, { id: acct.id, name: acct.name__v, isPerson: (acct.ispersonaccount__v === 1 || acct.ispersonaccount__v === true) });
+                });
+            }
+
+            // get calls for current hcos
+            this.callList = await partitionQuery(ids => getCallInfo(ids, this.activityTypeMap, this.userTypeMap), allAcctIds);
+
+            // get suggestions, sent email for childs hcps of current hcos
+            const childHcpResp = await getChildAccountInfo(allAcctIds);
+            if(childHcpResp && childHcpResp.length > 0) {
+                childHcpResp.forEach(ch => {
+                    this.childHcpList.push({
+                        id: ch.id,
+                        name: ch.name__v,
+                        label: ch.name__v,
+                        value: ch.id
+                    });
+
+                    if(!this.childHcpMap.has(ch.id)) {
+                        this.childHcpMap.set(ch.id, ch.name__v);
+                        this.allAccountMap.set(ch.id, 
+                            { id: ch.id, name: ch.name__v, isPerson: (ch.ispersonaccount__v === 1 || ch.ispersonaccount__v === true) ? true : false });
+                    }
+                });
+
+                // get sent emails
+                const allEmailAcctIds = Array.from(new Set([...allAcctIds, ...Array.from(this.childHcpMap.keys())]));
+                this.seList = await partitionQuery(ids => getSentEmailInfo(ids, this.userTypeMap), allEmailAcctIds);
+
+                // get events
+                // this.medEvtList = await partitionQuery(ids => getEventInfo(ids, this.eventTypeMap, this.userTypeMap), Array.from(this.childHcpMap.keys()));
+            }
+
+            // get suggestions
+            // this.setSuggestions(await partitionQuery(ids => getSuggestionInfo(ids, this.allAccountMap), Array.from(this.allAccountMap.keys())));
+            console.log(this.allAccountMap);
+            this.suggestionList = await getSuggestionInfo(this.allAccountMap);
+            console.log("SUGGESTION LIST");
+            console.log(this.suggestionList);
+
+
+            // get account plan and associated data
+            // account tactic/action item status picklist
+            let picklistResp = await getPicklistValueLabels('account_tactic__v', 'account_tactic_status__v');
+            if(picklistResp) {
+                this.statusMap = new Map(picklistResp);
+            }
+            // account tactic objective picklist
+            picklistResp = await getPicklistValueLabels('account_tactic__v', 'pac_objective__c');
+            if(picklistResp) {
+                let selectedObjectives = "";
+                if (this.territoryType.type === TEAM_EXPAREL) {
+                    selectedObjectives = i18n('AM_EXPAREL_OBJECTIVES');
+                } else if (this.territoryType.type === TEAM_ZILRETTA) {
+                    selectedObjectives = i18n('AM_ZILRETTA_OBJECTIVES');
+                } else if (this.territoryType.type === TEAM_OMFS) {
+                    selectedObjectives = i18n('AM_OMFS_OBJECTIVES');
+                } else if (this.territoryType.type === TEAM_IOVERA) {
+                    selectedObjectives = i18n('AM_IOVERA_OBJECTIVES');
+                }
+
+                const splitObjectives = selectedObjectives.split(';');
+                const objectiveSet = new Set(splitObjectives);
+                picklistResp.forEach(item => {
+                    if (objectiveSet.has(item[0])) {
+                        this.accountTacticMap.set(item[0], item[1]);
+                    }
+                });
+            }
+            // action item picklist
+            picklistResp = await getPicklistValueLabels('action_item__v', 'pac_action_item__c');
+            if(picklistResp) {
+                let selectedActionItems = "";
+                if (this.territoryType.type === TEAM_EXPAREL) {
+                    selectedActionItems = i18n('AM_EXPAREL_ACTION_ITEMS');
+                } else if (this.territoryType.type === TEAM_ZILRETTA) {
+                    selectedActionItems = i18n('AM_ZILRETTA_ACTION_ITEMS');
+                } else if (this.territoryType.type === TEAM_OMFS) {
+                    selectedActionItems = i18n('AM_OMFS_ACTION_ITEMS');
+                } else if (this.territoryType.type === TEAM_IOVERA) {
+                    selectedActionItems = i18n('AM_IOVERA_ACTION_ITEMS');
+                }
+
+                const splitActionItems = selectedActionItems.split(';');
+                const actionItemsSet = new Set(splitActionItems);
+                console.log("ACTION ITEM SET:", actionItemsSet);
+                picklistResp.forEach(item => {
+                    if (actionItemsSet.has(item[0])) {
+                        this.actionItemMap.set(item[0], item[1]);
+                    }
+                });
+            }
+
+            picklistResp = await getPicklistValueLabels('action_item__v', 'pac_progress__c');
+            if(picklistResp) {
+                this.progressMap = new Map(picklistResp);
+            }
+
+            // key stakeholder role picklist
+            picklistResp = await getPicklistValueLabels('key_stakeholder__v', 'role__v');
+            if(picklistResp) {
+                this.roleMap = new Map(picklistResp);
+            }
+
+            let pacTeam = '';
+            if (this.territoryType.type === TEAM_EXPAREL) {
+                pacTeam = 'exparel_core__c';
+            } else if (this.territoryType.type === TEAM_ZILRETTA) {
+                pacTeam = 'zilretta__c';
+            } else if (this.territoryType.type === TEAM_OMFS) {
+                pacTeam = 'omfs__c';
+            } else if (this.territoryType.type === TEAM_IOVERA) {
+                pacTeam = 'iovera__c';
+            }
+
+            const epData = await getEngagementPlanSummaryData(allAcctIds, pacTeam);
+            console.log("EP DATA");
+            console.log(epData);
+            if(epData && epData.rawPlans && epData.rawPlans.length > 0) {
+                this.rawPlans = epData.rawPlans;
+                this.rawPlanTactics = epData.rawPlanTactics;
+                this.rawAccountTactics = epData.rawAccountTactics;
+                this.rawActionItems = epData.rawActionItems;
+
+                epData.rawPlans.forEach(plan => {
+                    if (!this.acctPlan.id) {
+                        this.acctPlan.id = plan.id;
+                        this.acctPlan.name = plan.name__v;
+                    }
+                });
+
+                if(epData.rawPlanTactics.length > 0) {
+                    let planTacticSet = new Set();
+                    let ptMap = new Map();
+                    epData.rawPlanTactics.forEach(item => {
+                        ptMap.set(item.id, item.name__v);
+                        if (!planTacticSet.has(item.name__v)) {
+                            planTacticSet.add(item.name__v);
+                            // set plan tactics
+                            this.planTacticList.push({
+                                id: item.id,
+                                name: item.name__v
+                            });
+                        }
+                    });
+
+                    if (planTacticSet.has('Facility Level')) {
+                        this.setSelectedPlanTactic({ planTacticName: 'Facility Level' });
+                    }
+
+                    if(epData.rawAccountTactics.length > 0) {
+                        this.setAccountTactics(epData.rawAccountTactics, ptMap);
+                        this.setActionItems(epData.rawActionItems, ptMap);
+                    }
+                }
+            }
+
+            // Get Active Territory Accounts for Progress Widgets
+            const activeTerritoryResp = await partitionQuery(getAccountTerritories, [territoryId]);
+            this.activeTerritoryAccountIds = activeTerritoryResp ? activeTerritoryResp.map(at => at.account__v) : [];
+
+            const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
+            const epAccountIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.account__v) : [];
+            console.log("Account IDS and rawPlans");
+            console.log(epAccountIds);
+            console.log(this.rawPlans);
+
+            // Get Actioned Suggestions for KPI
+            this.actionedSuggestions = await partitionQuery(ids => getActionedSuggestions(ids, [this.user.id], 90), epAccountIds);
+            this.updateInteractionSummary(this.selectedDateRange);
+
+            // Get Dashboard Action Items
+            console.log("BEFORE GET ACTION ITEMS:", this.actionItemMap);
+            const planIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.id) : [];
+            if (planIds.length > 0) {
+                this.dashboardActionItems = await getDashboardActionItemsInfo(planIds, this.actionItemMap);
+            } else {
+                this.dashboardActionItems = [];
+            }
+            console.log("AFTER GET ACTION ITEMS:", this.dashboardActionItems);
+
+            /** TRACK EVENT */
+            this.trackEvent = true;
+        },
+        async refreshDashboardActionItems() {
+            const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
+            const planIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.id) : [];
+            if (planIds.length > 0) {
+                this.dashboardActionItems = await getDashboardActionItemsInfo(planIds, this.actionItemMap);
+            } else {
+                this.dashboardActionItems = [];
             }
         },
         updateInteractionSummary(days) {
@@ -394,7 +445,7 @@ export const useAppStore = defineStore('app', {
 
             let totalCalls = 0, totalAttendees = 0, callsWithMedia = 0, mediaUsed = 0;
             (this.callList || []).forEach(c => {
-                if (c.ownerId === this.user.id && epAccountIdsSet.has(c.accountId) && Moment(c.systemDate).isSameOrAfter(targetDate, 'day')) {
+                if (c && epAccountIdsSet.has(c.accountId) && Moment(c.systemDate).isSameOrAfter(targetDate, 'day')) {
                     totalCalls++;
                     totalAttendees += (c.numAttendees || 0);
                     if (c.isCLM) callsWithMedia++;
@@ -411,8 +462,12 @@ export const useAppStore = defineStore('app', {
             const avgAttendees = totalCalls > 0 ? Math.round(totalAttendees / totalCalls) : 0;
 
             let totalEmails = 0, clickedEmails = 0;
+            console.log("SENT EMAILS LIST", this.seList);
+            // we are removing the check for accountID due to the EMAIL account being the HCP, while the epACCOUNT is the 
             (this.seList || []).forEach(e => {
-                if (e && e.ownerId === this.user.id && epAccountIdsSet.has(e.accountId) && Moment(e.systemDate).isSameOrAfter(targetDate, 'day')) {
+                console.log("accountID:", e.accountId, "system date", e.systemDate, "target date: ",targetDate);
+                console.log(epAccountIdsSet);
+                if (e && Moment(e.systemDate).isSameOrAfter(targetDate, 'day')) {
                     totalEmails++;
                     if (e.clicked) clickedEmails++;
                 }
@@ -426,8 +481,10 @@ export const useAppStore = defineStore('app', {
 
 
             let pendingSuggestions = 0;
+            console.log("SUGGESTION LIST", this.suggestionList);
+            // pendingSuggestions = this.suggestionList ? this.suggestionList.length : 0;
             (this.suggestionList || []).forEach(s => {
-                if (s && epAccountIdsSet.has(s.accountId) && Moment(s.postedSystemDate).isSameOrAfter(targetDate, 'day')) {
+                if (s && epAccountIdsSet.has(s.accountId)&& Moment(s.postedSystemDate).isSameOrAfter(targetDate, 'day')) {
                     pendingSuggestions++;
                 }
             });
@@ -474,6 +531,9 @@ export const useAppStore = defineStore('app', {
                 this.territories = [];
             }
         },
+        setSelectedPlanTactic(value) {
+            this.selectedPlanTactic = value;
+        },
         async changeTerritory(territoryId, i18n) {
             const selected = this.territories.find(t => t.id === territoryId);
             if(selected && selected.id !== this.territory.id) {
@@ -507,7 +567,7 @@ export const useAppStore = defineStore('app', {
                 }
             }
         },
-        setAccount(acctList, parentAcctList, addrList, hcoTypeMap, priorityMap, doNotCallMap) {
+        setAccount(acctList, parentAcctList, hcoTypeMap, doNotCallMap) {
             if(acctList?.length) {
                 this.account.id = acctList[0].id;
                 this.account.name = acctList[0].name__v;
@@ -525,10 +585,10 @@ export const useAppStore = defineStore('app', {
                 // this.account.productPromoRestrictions = (acctList[0].pac_prod_restr__c) ? acctList[0].pac_prod_restr__c : NO_DATA;
                 // this.account.sampleRestrictions = (acctList[0].pac_sample_restr__c) ? acctList[0].pac_sample_restr__c : NO_DATA;
                 this.account.doNotCall = (acctList[0].pacira_do_not_call_banner__c && doNotCallMap && doNotCallMap.has(acctList[0].pacira_do_not_call_banner__c)) ? doNotCallMap.get(acctList[0].pacira_do_not_call_banner__c) : NO_DATA;
-                this.account.address = (addrList && addrList.length > 0 && addrList[0].pcr_full_address_cnx__c) ? addrList[0].pcr_full_address_cnx__c : NO_DATA;
-                this.account.exparelPriority = (acctList[0].pac_exparel_priority__c && priorityMap && priorityMap.has(acctList[0].pac_exparel_priority__c)) ? priorityMap.get(acctList[0].pac_exparel_priority__c) : NO_DATA;
-                this.account.ioveraPriority = (acctList[0].pac_iovera_priority__c && priorityMap && priorityMap.has(acctList[0].pac_iovera_priority__c)) ? priorityMap.get(acctList[0].pac_iovera_priority__c) : NO_DATA
-                this.account.zilrettaPriority = (acctList[0].pac_zilretta_priority__c && priorityMap && priorityMap.has(acctList[0].pac_zilretta_priority__c)) ? priorityMap.get(acctList[0].pac_zilretta_priority__c) : NO_DATA
+                // this.account.address = (addrList && addrList.length > 0 && addrList[0].pcr_full_address_cnx__c) ? addrList[0].pcr_full_address_cnx__c : NO_DATA;
+                // this.account.exparelPriority = (acctList[0].pac_exparel_priority__c && priorityMap && priorityMap.has(acctList[0].pac_exparel_priority__c)) ? priorityMap.get(acctList[0].pac_exparel_priority__c) : NO_DATA;
+                // this.account.ioveraPriority = (acctList[0].pac_iovera_priority__c && priorityMap && priorityMap.has(acctList[0].pac_iovera_priority__c)) ? priorityMap.get(acctList[0].pac_iovera_priority__c) : NO_DATA
+                // this.account.zilrettaPriority = (acctList[0].pac_zilretta_priority__c && priorityMap && priorityMap.has(acctList[0].pac_zilretta_priority__c)) ? priorityMap.get(acctList[0].pac_zilretta_priority__c) : NO_DATA
             }
         },
         setSuggestions(resp) {
@@ -587,12 +647,12 @@ export const useAppStore = defineStore('app', {
                 this.actionItemList = [];
             }
         },
-        setKeyStakeholders(resp) {
-            if(resp && resp.length > 0) {
-                this.stakeholders = [...resp];
-            } else {
-                this.stakeholders = [];
-            }
-        },
+        // setKeyStakeholders(resp) {
+        //     if(resp && resp.length > 0) {
+        //         this.stakeholders = [...resp];
+        //     } else {
+        //         this.stakeholders = [];
+        //     }
+        // },
     }
 });

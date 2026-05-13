@@ -1,6 +1,8 @@
 <template>
     <div id="app-main" :class="themeClass" class="bg-light" style="height: 100%;">
-        <BaseSpinner v-if="isLoading" size="l" position="middle" />
+        <div v-if="isLoading" class="d-flex justify-content-center align-items-center w-100" style="min-height: 100vh;">
+            <BaseSpinner class="spinner" size="l" position="middle" />
+        </div>
         <router-view v-else/>
     </div>
 </template>
@@ -57,6 +59,6 @@
 <style>
     body {
         font-family: 'Arial', sans-serif;
-        color: #1D1D1D
+        color: #1D1D1D;
     }
 </style>

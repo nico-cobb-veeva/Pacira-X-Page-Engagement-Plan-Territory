@@ -174,26 +174,16 @@ const processCallResponse = (calls, ownerMap, activityTypeMap, userTypeMap, chil
 
 // get email info
 export const getSentEmailInfo = (acctIds, userTypeMap) => {
-    let sentEmails = [], ownerIds = [], ownerMap = new Map();
+    let sentEmails = [];
     return ds.getSentEmails(acctIds)
     .then(seResp => {
         if(seResp && seResp.length > 0) {
             sentEmails = [...seResp];
-            ownerIds = seResp.map(se => se.ownerid__v);
         }
-        return ds.getUserInfo(ownerIds);
-    }).then(userResp => {
-        if(userResp && userResp.length > 0) {
-            userResp.forEach(u => {
-                if(!ownerMap.has(u.id)) {
-                    ownerMap.set(u.id, u);
-                }
-            });
-        }
-        return processEmailResponse(sentEmails, ownerMap, userTypeMap);
+        return processEmailResponse(sentEmails);
     });
 };
-const processEmailResponse = (sentEmails, ownerMap, userTypeMap) => {
+const processEmailResponse = (sentEmails) => {
     let retList = [];
     if(sentEmails && sentEmails.length > 0) {
         retList = sentEmails.map(se => {
@@ -201,14 +191,6 @@ const processEmailResponse = (sentEmails, ownerMap, userTypeMap) => {
             let desc = NO_DATA;
             if(se.subject__v) {
                 desc = se.subject__v;
-            }
-
-            // owner detail
-            let userName = '', userType = '';
-            if(ownerMap && ownerMap.has(se.ownerid__v)) {
-                const owner = ownerMap.get(se.ownerid__v);
-                userName = owner.name__v;
-                userType = (userTypeMap && userTypeMap.has(owner.user_type__v)) ? userTypeMap.get(owner.user_type__v) : '';
             }
 
             return {
@@ -219,9 +201,6 @@ const processEmailResponse = (sentEmails, ownerMap, userTypeMap) => {
                 description: desc, 
                 clicked: ((typeof se.clicked__v === 'number' && se.clicked__v === 1) || (typeof se.clicked__v === 'boolean' && se.clicked__v === true)) ? true : false,
                 lastClicked: (se.last_click_date__v) ? Moment(se.last_click_date__v).format(DISPLAY_DATE_FORMAT) : NO_DATA,
-                ownerId: se.ownerid__v,
-                ownerName: userName,
-                ownerType: userType,
                 displayDate: Moment(se.email_sent_date__v).format(DISPLAY_DATE_FORMAT),
                 systemDate: Moment(se.email_sent_date__v).format(SYSTEM_DATE_FORMAT)
             };
@@ -288,9 +267,11 @@ const processEventResponse = (events, eventTypeMap, ownerMap, userTypeMap) => {
 }
 
 // get suggestion info
-export const getSuggestionInfo = (acctIds, accountMap, userIds) => {
-    return ds.getSuggestions(acctIds, userIds)
+export const getSuggestionInfo = (accountMap) => {
+    return ds.getSuggestions()
     .then(suggResp => {
+        console.log("response:", suggResp);
+        console.log("accountMap:", accountMap);
         return processSuggestionResponse(suggResp, accountMap);
     });
 };
@@ -299,7 +280,7 @@ const processSuggestionResponse = (suggestions, accountMap) => {
     const suggestionTypes = ['call__v', 'email__v', 'insight__v'];
     let retList = [];
     if(suggestions && suggestions.length > 0) {
-        retList = suggestions.filter(item => suggestionTypes.includes(item.record_type_name__v)).map(s => {
+        retList = suggestions.filter(item => suggestionTypes.includes(item.record_type_name__v) && accountMap && accountMap.has(item.account__v)).map(s => {
             const today = Moment().format(SYSTEM_DATE_FORMAT);
             const threeDaysAgo = Moment().subtract(3, 'days').format(SYSTEM_DATE_FORMAT);
             const postedSystemDate = Moment(s.posted_date__v).format(SYSTEM_DATE_FORMAT);

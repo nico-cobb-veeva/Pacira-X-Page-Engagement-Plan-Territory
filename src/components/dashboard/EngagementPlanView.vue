@@ -1,41 +1,41 @@
 <template>
     <div class="card shadow-sm border-0 h-100">
         <div class="card-header bg-white d-flex justify-content-between align-items-center border-bottom pb-2 pt-3">
-            <span class="fw-bold fs-5"><i class="bi bi-lightning-charge me-2"></i>Engagement Plans ({{ engagementPlans.length }})</span>
+            <span class="fw-bold fs-5"><i class="bi bi-lightning-charge me-2"></i>{{ $t('EPD_ENGAGEMENT_PLANS') }} ({{ engagementPlans.length }})</span>
             <div class="d-flex">
-                <select class="form-select form-select-sm me-2" style="width: auto;" v-model="selectedPlanTactic">
-                    <option value="all">All Levels</option>
-                    <option v-for="pt in planTacticList" :key="pt.id" :value="pt.id">{{ pt.name }}</option>
+                <select v-if="planTacticList.length > 1" class="form-select form-select-sm me-2" style="width: auto;" v-model="selectedPlanTactic.planTacticName">
+                    <option value="all">{{ $t('EPD_ALL_LEVELS') }}</option>
+                    <option v-for="pt in planTacticList" :key="pt.id" :value="pt.name">{{ pt.name }}</option>
                 </select>
                 <div class="input-group input-group-sm" style="width: 12.5rem;">
                     <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control border-start-0 ps-0" placeholder="Search..." v-model="searchQuery">
+                    <input type="text" class="form-control border-start-0 ps-0" :placeholder="$t('EPD_SEARCH')" v-model="searchQuery">
                 </div>
             </div>
         </div>
         <div class="card-body p-0 table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+            <table class="table table-striped align-middle mb-0" style="font-size: 0.9rem;">
                 <thead class="table-light text-muted small">
                     <tr>
-                        <th class="fw-normal py-2 ps-3 border-end">ENGAGEMENT PLAN</th>
-                        <th class="fw-normal border-end">ACCOUNT</th>
-                        <th class="fw-normal text-nowrap border-end"># OBJECTIVES</th>
-                        <th class="fw-normal text-nowrap border-end"># ACTION ITEMS</th>
-                        <th class="fw-normal border-end" style="min-width: 9.375rem;">PROGRESS</th>
-                        <th class="fw-normal text-center border-end">NO ACTIVITIES<br><span style="font-size:0.7rem">(last 30 days)</span></th>
-                        <th class="fw-normal text-center border-end">ACHIEVEMENTS<br><span style="font-size:0.7rem">(completed in 15 days)</span></th>
-                        <th class="fw-normal text-center">LKA PROFILE</th>
+                        <th class="fw-normal py-2 ps-3 border-end">{{ $t('EPD_COL_ENGAGEMENT_PLAN') }}</th>
+                        <th class="fw-normal border-end">{{ $t('EPD_COL_ACCOUNT') }}</th>
+                        <th class="fw-normal text-nowrap border-end">{{ $t('EPD_COL_NUM_OBJECTIVES') }}</th>
+                        <th class="fw-normal text-nowrap border-end">{{ $t('EPD_COL_NUM_ACTION_ITEMS') }}</th>
+                        <th class="fw-normal border-end" style="min-width: 9.375rem;">{{ $t('EPD_COL_PROGRESS') }}</th>
+                        <th class="fw-normal text-center border-end">{{ $t('EPD_COL_NO_ACTIVITIES') }}<br><span style="font-size:0.7rem">({{ $t('EPD_LAST_30_DAYS') }})</span></th>
+                        <th class="fw-normal text-center border-end">{{ $t('EPD_COL_ACHIEVEMENTS') }}<br><span style="font-size:0.7rem">({{ $t('EPD_COMPLETED_IN_15_DAYS') }})</span></th>
+                        <th class="fw-normal text-center">{{ $t('EPD_COL_LKA_PROFILE') }}<br><span style="font-size:0.7rem">({{ $t('EPD_IF_AVAILABLE') }})</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-if="isLoading">
                         <td colspan="8" class="text-center py-4 text-muted">
                             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            Loading engagement plans...
+                            {{ $t('EPD_LOADING_ENGAGEMENT_PLANS') }}
                         </td>
                     </tr>
                     <tr v-else-if="engagementPlans.length === 0">
-                        <td colspan="8" class="text-center py-4 text-muted">No engagement plans found</td>
+                        <td colspan="8" class="text-center py-4 text-muted">{{ $t('EPD_NO_ENGAGEMENT_PLANS_FOUND') }}</td>
                     </tr>
                     <EngagementPlanViewListItem 
                         v-else
@@ -64,13 +64,17 @@
     import Moment from 'moment';
     import { useAppStore } from '@/store/app';
     import { storeToRefs } from 'pinia';
+    import { defineProps } from "vue";
 
     import EngagementPlanViewListItem from '@/components/dashboard/EngagementPlanViewListItem.vue';
 
-    const store = useAppStore();
-    const { planTacticList, rawPlans, rawPlanTactics, rawAccountTactics, rawActionItems, allAccountMap, isLoading, activeTerritoryAccountIds } = storeToRefs(store);
+    const props = defineProps({
 
-    const selectedPlanTactic = ref('all');
+    });
+
+    const store = useAppStore();
+    const { planTacticList, rawPlans, rawPlanTactics, rawAccountTactics, rawActionItems, allAccountMap, isLoading, activeTerritoryAccountIds, selectedPlanTactic } = storeToRefs(store);
+
     const searchQuery = ref('');
 
     const engagementPlans = computed(() => {
@@ -86,6 +90,7 @@
             }
 
             const account = allAccountMap.value.get(plan.account__v);
+            console.log("Engagment plan account:", account, "plan:", plan);
             const accountName = account ? account.name : 'Unknown Account';
 
             if (sq) {
@@ -105,9 +110,9 @@
                 at.pac_objective_marked_for_delete__c !== true
             );
 
-            if (selectedPlanTactic.value !== 'all') {
+            if (selectedPlanTactic.value.planTacticName !== 'all') {
                 const matchingPtIds = myPlanTactics
-                    .filter(pt => pt.name__v === selectedPlanTactic.value)
+                    .filter(pt => pt.name__v === selectedPlanTactic.value.planTacticName)
                     .map(pt => pt.id);
                     
                 myAccountTactics = myAccountTactics.filter(at => matchingPtIds.includes(at.plan_tactic__v));
@@ -141,7 +146,7 @@
             results.push({
                 accountPlan: plan,
                 account: account || {},
-                planTactic: selectedPlanTactic.value,
+                planTactic: selectedPlanTactic.value.planTacticName,
                 accountName: accountName,
                 numObjectives,
                 numActionItems,
