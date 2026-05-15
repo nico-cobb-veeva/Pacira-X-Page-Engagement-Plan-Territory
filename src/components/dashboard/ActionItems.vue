@@ -119,9 +119,6 @@
 
     const actionItemOptions = computed(() => {
         let options = [];
-        console.log("ACTION ITEM OPTIONS:")
-        console.log(actionItemOptionMap.value)
-        console.log(actionItemMap);
         if(actionItemOptionMap.value) {
             actionItemOptionMap.value.forEach((value, key) => {
                 options.push({ id: key, name: value });

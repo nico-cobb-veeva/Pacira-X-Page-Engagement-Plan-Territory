@@ -162,8 +162,6 @@ export const useAppStore = defineStore('app', {
                 //pass the userID here to query the user_territory
                 // set territories
                 const isManager = this.isManager;
-                console.log("CHECK IS MANAGER", isManager);
-                console.log("app profile", this.user.appProfile);
                 const userTerritories = await getUserTerritoryDetail([this.user.id], isManager);
                 
                 if (isManager && userTerritories && userTerritories.length > 0) {
@@ -221,9 +219,7 @@ export const useAppStore = defineStore('app', {
             this.acctPlan = { id: '', name: '' };
 
             // set all account info specifically scoped to context territory
-            console.log("BEFORE getAccountDetail", [territoryId]);
             const acctRespObj = await getAccountDetail([territoryId]);
-            console.log("AFTER getAccountDetail", acctRespObj);
             let allAcctIds = [];
             let acctList = [];
             let parentAcctList = [];
@@ -273,10 +269,7 @@ export const useAppStore = defineStore('app', {
 
             // get suggestions
             // this.setSuggestions(await partitionQuery(ids => getSuggestionInfo(ids, this.allAccountMap), Array.from(this.allAccountMap.keys())));
-            console.log(this.allAccountMap);
             this.suggestionList = await getSuggestionInfo(this.allAccountMap);
-            console.log("SUGGESTION LIST");
-            console.log(this.suggestionList);
 
 
             // get account plan and associated data
@@ -323,7 +316,6 @@ export const useAppStore = defineStore('app', {
 
                 const splitActionItems = selectedActionItems.split(';');
                 const actionItemsSet = new Set(splitActionItems);
-                console.log("ACTION ITEM SET:", actionItemsSet);
                 picklistResp.forEach(item => {
                     if (actionItemsSet.has(item[0])) {
                         this.actionItemMap.set(item[0], item[1]);
@@ -354,8 +346,6 @@ export const useAppStore = defineStore('app', {
             }
 
             const epData = await getEngagementPlanSummaryData(allAcctIds, pacTeam);
-            console.log("EP DATA");
-            console.log(epData);
             if(epData && epData.rawPlans && epData.rawPlans.length > 0) {
                 this.rawPlans = epData.rawPlans;
                 this.rawPlanTactics = epData.rawPlanTactics;
@@ -401,23 +391,18 @@ export const useAppStore = defineStore('app', {
 
             const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
             const epAccountIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.account__v) : [];
-            console.log("Account IDS and rawPlans");
-            console.log(epAccountIds);
-            console.log(this.rawPlans);
 
             // Get Actioned Suggestions for KPI
             this.actionedSuggestions = await partitionQuery(ids => getActionedSuggestions(ids, [this.user.id], 90), epAccountIds);
             this.updateInteractionSummary(this.selectedDateRange);
 
             // Get Dashboard Action Items
-            console.log("BEFORE GET ACTION ITEMS:", this.actionItemMap);
             const planIds = this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.id) : [];
             if (planIds.length > 0) {
                 this.dashboardActionItems = await getDashboardActionItemsInfo(planIds, this.actionItemMap);
             } else {
                 this.dashboardActionItems = [];
             }
-            console.log("AFTER GET ACTION ITEMS:", this.dashboardActionItems);
 
             /** TRACK EVENT */
             this.trackEvent = true;
@@ -432,16 +417,11 @@ export const useAppStore = defineStore('app', {
             }
         },
         updateInteractionSummary(days) {
-            console.log("ENTERING UPDATE INTERACTION SUMMARY");
             this.selectedDateRange = days;
 
             const activeAccountIdsSet = new Set(this.activeTerritoryAccountIds);
             const epAccountIdsSet = new Set(this.rawPlans ? this.rawPlans.filter(p => activeAccountIdsSet.has(p.account__v)).map(p => p.account__v) : []);
             const targetDate = Moment().subtract(days, 'days').startOf('day');
-
-            console.log("HERE 1");
-            console.log(activeAccountIdsSet);
-            console.log(epAccountIdsSet);
 
             let totalCalls = 0, totalAttendees = 0, callsWithMedia = 0, mediaUsed = 0;
             (this.callList || []).forEach(c => {
@@ -453,20 +433,11 @@ export const useAppStore = defineStore('app', {
                 }
             });
 
-            console.log("HERE 2");
-            console.log(totalCalls);
-            console.log(totalAttendees);
-            console.log(callsWithMedia);
-            console.log(mediaUsed);
-
             const avgAttendees = totalCalls > 0 ? Math.round(totalAttendees / totalCalls) : 0;
 
             let totalEmails = 0, clickedEmails = 0;
-            console.log("SENT EMAILS LIST", this.seList);
             // we are removing the check for accountID due to the EMAIL account being the HCP, while the epACCOUNT is the 
             (this.seList || []).forEach(e => {
-                console.log("accountID:", e.accountId, "system date", e.systemDate, "target date: ",targetDate);
-                console.log(epAccountIdsSet);
                 if (e && Moment(e.systemDate).isSameOrAfter(targetDate, 'day')) {
                     totalEmails++;
                     if (e.clicked) clickedEmails++;
@@ -474,24 +445,14 @@ export const useAppStore = defineStore('app', {
             });
             const emailClickRate = totalEmails > 0 ? Math.round((clickedEmails / totalEmails) * 100) : 0;
 
-            console.log("HERE 3");
-            console.log(totalEmails);
-            console.log(clickedEmails);
-            console.log(emailClickRate);
-
 
             let pendingSuggestions = 0;
-            console.log("SUGGESTION LIST", this.suggestionList);
             // pendingSuggestions = this.suggestionList ? this.suggestionList.length : 0;
             (this.suggestionList || []).forEach(s => {
                 if (s && epAccountIdsSet.has(s.accountId)&& Moment(s.postedSystemDate).isSameOrAfter(targetDate, 'day')) {
                     pendingSuggestions++;
                 }
             });
-
-            console.log("HERE 4");
-            console.log(pendingSuggestions);
-
 
             let actionedSuggestions = 0;
             (this.actionedSuggestions || []).forEach(s => {
@@ -500,12 +461,7 @@ export const useAppStore = defineStore('app', {
                 }
             });
 
-            console.log("HERE 5");
-            console.log(actionedSuggestions);
-
-
             this.interactionSummary = { totalCalls, avgAttendees, callsWithMedia, mediaUsed, totalEmails, emailClickRate, pendingSuggestions, actionedSuggestions };
-            console.log("EXITING UPDATE INTERACTION SUMMARY");
         },
         setIsOnline(isOnline){
             this.isOnline = (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') 

@@ -327,8 +327,6 @@
 				}
 			});
 			// if no Facility Level Plan Tactic then default it to 1
-			console.log("Plan tactics");
-			console.log(selectedPlanTactics.value);
 			if(safe(planTactics.value) && !hasFacilityLevel) {
 				selectedPlanTactics.value = planTactics.value[0].id;
 			}
@@ -580,8 +578,6 @@
     // key stakeholder list
     const ksList = computed(() => {
     	let retList = [];
-		console.log("KEYYYYY STAKEHOLDERSSSSS AAAAAAAAA");
-		console.log(keyStakeholders.value);
     	if(keyStakeholders.value && keyStakeholders.value.length > 0) {
     		keyStakeholders.value.filter(item => item.account != null).map(ks => {
     			// account info

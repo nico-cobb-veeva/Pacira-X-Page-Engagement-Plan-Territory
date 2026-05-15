@@ -90,7 +90,6 @@
             }
 
             const account = allAccountMap.value.get(plan.account__v);
-            console.log("Engagment plan account:", account, "plan:", plan);
             const accountName = account ? account.name : 'Unknown Account';
 
             if (sq) {

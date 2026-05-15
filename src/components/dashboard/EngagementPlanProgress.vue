@@ -37,7 +37,6 @@
     const store = useAppStore();
     const { actionItemList, rawPlans, rawPlanTactics, rawAccountTactics, activeTerritoryAccountIds, selectedPlanTactic } = storeToRefs(store);
 
-    console.log("SELECTED PALN ATCTCI", selectedPlanTactic.value.planTacticName)
     const validAccountTacticIds = computed(() => {
         const activeAccountIdsSet = new Set(activeTerritoryAccountIds.value || []);
         
@@ -53,7 +52,6 @@
         }
 
         if (filtered) {
-            console.log("SELECTED PALN ATCTCI", selectedPlanTactic.value.planTacticName);
             const validPtIds = new Set(
                 (rawPlanTactics.value || [])
                 .filter(pt => validPlanIds.has(pt.account_plan__v) && pt.name__v === selectedPlanTactic.value.planTacticName)

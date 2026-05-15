@@ -73,15 +73,12 @@
     });
 
     const openAccount = () => {
-        console.log('openAccount');
-        console.log("account", props.account, "account.id", props.account.id);
         if (props.account && props.account.id) {
             viewRecord('account__v', props.account.id);
         }
     };
 
     const openLKA = () => {
-        console.log('openLKA');
         if (props.account && props.account.id) {
             viewRecord('account__v', props.account.id, "Link Key Accounts HCO__institution__v");
         }

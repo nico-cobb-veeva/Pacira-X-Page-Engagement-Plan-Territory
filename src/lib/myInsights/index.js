@@ -68,8 +68,6 @@ export const getAccountDetail = (territoryIds) => {
         if(atResp && atResp.length > 0) {
             acctIds = atResp.map(at => at.account__v);
         }
-        console.log("BEFORE getAccountInfo acctIds");
-        console.log(acctIds);
         return partitionQuery(ids => ds.getAccountInfo(ids, true), acctIds);
     }).then(aResp => {
         acctResp = aResp ? [...aResp] : [];

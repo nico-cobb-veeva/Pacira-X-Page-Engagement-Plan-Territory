@@ -357,7 +357,6 @@ export const getSubmittedCalls = (acctIds, daysAgo = 90) => {
 
 // get suggestions
 export const getSuggestions = (daysAgo = 90) => {
-    console.log("NOW CALLING getSuggestions");
     const today = Moment().format(SYSTEM_DATE_FORMAT);
     const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
     // const deferred = $q.defer();
@@ -407,7 +406,6 @@ export const getSuggestions = (daysAgo = 90) => {
         deferred.resolve(data);
     }, err => {
         console.log(err);
-        console.log("GET SUGGESTIONS ERROR HERE");
         deferred.resolve(null);
     });
     return deferred.promise;
@@ -415,9 +413,6 @@ export const getSuggestions = (daysAgo = 90) => {
 
 // get actioned suggestions
 export const getActionedSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
-    console.log("NOW CALLING getActionedSuggestions");
-    console.log(acctIds);
-    console.log(ownerIds);
     const targetDate = Moment().subtract(daysAgo, "days").format(SYSTEM_DATE_FORMAT);
 
     let where = '';
@@ -446,7 +441,6 @@ export const getActionedSuggestions = (acctIds, ownerIds, daysAgo = 90) => {
         data = data.filter(item => Moment(item.posted_date__v).isSameOrAfter(targetDate, 'day'));
         deferred.resolve(data);
     }, err => {
-        console.log("GET ACTIONED SUGGESTIONS ERROR HERE");
         console.log(err);
         deferred.resolve(null);
     });
@@ -549,7 +543,6 @@ export const getAccountTacticByMobileId = (mobileId) => {
 
 // get account tactic
 export const getActionItems = (acctTacticIds) => {
-    console.log("NOW CALLING getActionItems", acctTacticIds);
     const deferred = $q.defer();
     const queryConfig = {
         object: 'action_item__v',
@@ -562,7 +555,6 @@ export const getActionItems = (acctTacticIds) => {
         console.log('getActionItems()', result[queryConfig.object]);
         deferred.resolve(result[queryConfig.object]);
     }, err => {
-        console.log("GET ACTION ITEMS ERROR HERE");
         console.log(err);
         deferred.resolve(null);
     });
