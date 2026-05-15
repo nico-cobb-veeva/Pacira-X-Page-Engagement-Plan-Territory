@@ -92,7 +92,7 @@
     //store getters
     const store = useAppStore();
     const { t } = useI18n();
-    const { dashboardActionItems, statusMap, progressMap, rawActionItems, actionItemList, actionItemOptionMap, actionItemMap, isManager } = storeToRefs(store);
+    const { dashboardActionItems, statusMap, progressMap, rawActionItems, rawPlanTactics, selectedPlanTactic, actionItemList, actionItemOptionMap, actionItemMap, isManager } = storeToRefs(store);
     const { setNotification, refreshDashboardActionItems } = store;
 
     //local props
@@ -109,10 +109,30 @@
     const dueSoonActionItems = computed(() => {
         const thirtyDaysFromNow = Moment().add(30, 'days').endOf('day');
 
+        let validPtIds = null;
+        if (selectedPlanTactic.value && selectedPlanTactic.value.planTacticName !== 'all') {
+            validPtIds = new Set(
+                (rawPlanTactics.value || [])
+                .filter(pt => pt.name__v === selectedPlanTactic.value.planTacticName)
+                .map(pt => pt.id)
+            );
+        }
+
         return dashboardActionItems.value.filter(item => {
             if (!item.dueDate) return false;
             const dueDate = Moment(item.dueDate);
-            return dueDate.isValid() && dueDate.isSameOrBefore(thirtyDaysFromNow, 'day');
+            if (!dueDate.isValid() || !dueDate.isSameOrBefore(thirtyDaysFromNow, 'day')) {
+                return false;
+            }
+
+            if (validPtIds) {
+                const rawAi = rawActionItems.value.find(ai => ai.id === item.id);
+                if (!rawAi || !validPtIds.has(rawAi.plan_tactic__v)) {
+                    return false;
+                }
+            }
+
+            return true;
         });
     });
 
