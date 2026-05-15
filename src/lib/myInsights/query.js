@@ -256,7 +256,7 @@ export const getSentEmails = (acctIds, daysAgo = 90) => {
     const deferred = $q.defer();
     const queryConfig = {
         object: 'sent_email__v',
-        fields: ['id', 'account__v', 'subject__v', 'email_sent_date__v', 'clicked__v', 'last_click_date__v', 'product_display__v'],
+        fields: ['id', 'account__v', 'subject__v', 'email_sent_date__v', 'opened__v', 'last_click_date__v', 'product_display__v'],
         where: `account__v IN ${Utils.getInStatementArray(acctIds)}
                AND sent_email_status__v IN  ${Utils.getInStatementArray(['sent__v', 'delivered__v'])}
                AND email_sent_date__v >= '${targetDate}'`,

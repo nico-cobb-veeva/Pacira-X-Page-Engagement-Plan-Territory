@@ -437,7 +437,7 @@ export const queryRecord = {
             subject__v: 'EXPAREL Discount Program',
             email_sent_date__v: "2026-04-20T20:27:19.000Z",
             account__v: "V4T000000001000",
-            clicked__v: 0,
+            opened__v: 0,
             ownerid__v: '20079859',
             last_click_date__v: '2026-04-21T11:34:39.000Z',
             product_display__v: 'EXPAREL'
@@ -446,7 +446,7 @@ export const queryRecord = {
             subject__v: 'Medicare reimburses EXPAREL (J0666) in outpatient settings for spine procedures',
             email_sent_date__v: "2026-03-20T20:27:19.000Z",
             account__v: "V4T000000001000",
-            clicked__v: 1,
+            opened__v: 1,
             ownerid__v: '20079859',
             last_click_date__v: '2026-03-22T11:34:39.000Z',
             product_display__v: 'EXPAREL'
@@ -455,7 +455,7 @@ export const queryRecord = {
             subject__v: 'EXCLUSIVE ORTHOFORUM CONTRACTED PRICING FOR ZILRETTA',
             email_sent_date__v: "2026-02-20T20:27:19.000Z",
             account__v: "V4T000000001000",
-            clicked__v: 1,
+            opened__v: 1,
             ownerid__v: '20079860',
             last_click_date__v: '2026-02-21T11:34:39.000Z',
             product_display__v: 'ZILRETTA'
@@ -464,7 +464,7 @@ export const queryRecord = {
             subject__v: 'EXCLUSIVE ORTHOFORUM CONTRACTED PRICING FOR ZILRETTA',
             email_sent_date__v: "2026-01-15T20:27:19.000Z",
             account__v: "V4T000000001002",
-            clicked__v: 1,
+            opened__v: 1,
             ownerid__v: '20079860',
             last_click_date__v: '2026-01-16T11:34:39.000Z',
             product_display__v: 'ZILRETTA'
@@ -473,7 +473,7 @@ export const queryRecord = {
             subject__v: 'SAFETY DATA FOR ZILRETTA',
             email_sent_date__v: "2026-01-10T20:27:19.000Z",
             account__v: "V4T000000001000",
-            clicked__v: 0,
+            opened__v: 0,
             ownerid__v: '20079859',
             last_click_date__v: '2026-01-11T11:34:39.000Z',
             product_display__v: 'ZILRETTA'

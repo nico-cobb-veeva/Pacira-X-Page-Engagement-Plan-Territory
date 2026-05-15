@@ -14,7 +14,7 @@
                     <InteractionKpi 
                         :title="$t('EPD_TOTAL_ACCOUNT_CALLS')" 
                         :value="interactionSummary.totalCalls" 
-                        :subTitle="$t('EPD_AVG_ATTENDEES_PER_CALL') + interactionSummary.avgAttendees" 
+                        :subTitle="$t('EPD_AVG_ATTENDEES_PER_CALL') +' ' + interactionSummary.avgAttendees" 
                         barColor="#0dcaf0"
                     />
                 </div>
@@ -22,7 +22,7 @@
                     <InteractionKpi 
                         :title="$t('EPD_TOTAL_CALLS_W_MEDIA')" 
                         :value="interactionSummary.callsWithMedia" 
-                        :subTitle="$t('EPD_MEDIA_USED') + interactionSummary.mediaUsed" 
+                        :subTitle="$t('EPD_MEDIA_USED') + ' ' +interactionSummary.mediaUsed" 
                         barColor="#adb5bd"
                     />
                 </div>
@@ -30,7 +30,7 @@
                     <InteractionKpi 
                         :title="$t('EPD_TOTAL_SENT_EMAILS')" 
                         :value="interactionSummary.totalEmails" 
-                        :subTitle="$t('EPD_EMAIL_CLICKED_RATE') + interactionSummary.emailClickRate + '%'" 
+                        :subTitle="$t('EPD_EMAIL_CLICKED_RATE') + ' ' + interactionSummary.emailClickRate + '%'" 
                         barColor="#ffc107"
                     />
                 </div>
@@ -38,7 +38,7 @@
                     <InteractionKpi 
                         :title="$t('EPD_PENDING_SUGGESTIONS')" 
                         :value="interactionSummary.pendingSuggestions" 
-                        :subTitle="$t('EPD_TOTAL_ACTIONED') + interactionSummary.actionedSuggestions" 
+                        :subTitle="$t('EPD_TOTAL_ACTIONED') + ' ' + interactionSummary.actionedSuggestions" 
                         barColor="#6f42c1"
                     />
                 </div>

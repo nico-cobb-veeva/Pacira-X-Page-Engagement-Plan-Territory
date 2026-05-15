@@ -197,7 +197,7 @@ const processEmailResponse = (sentEmails) => {
                 accountId: se.account__v,
                 product: (se.product_display__v) ? se.product_display__v : NO_DATA,
                 description: desc, 
-                clicked: ((typeof se.clicked__v === 'number' && se.clicked__v === 1) || (typeof se.clicked__v === 'boolean' && se.clicked__v === true)) ? true : false,
+                clicked: ((typeof se.opened__v === 'number' && se.opened__v === 1) || (typeof se.opened__v === 'boolean' && se.opened__v === true)) ? true : false,
                 lastClicked: (se.last_click_date__v) ? Moment(se.last_click_date__v).format(DISPLAY_DATE_FORMAT) : NO_DATA,
                 displayDate: Moment(se.email_sent_date__v).format(DISPLAY_DATE_FORMAT),
                 systemDate: Moment(se.email_sent_date__v).format(SYSTEM_DATE_FORMAT)
